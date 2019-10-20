@@ -1,0 +1,6 @@
+librosa
+matplotlib
+numpy
+pandas
+torch
+tqdm

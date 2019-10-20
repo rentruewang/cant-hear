@@ -1,0 +1,16 @@
+{
+    "folder": "data",
+    "sub_train": "train",
+    "sub_test": "test",
+    "sub_noise": "noise",
+    "train_regex": [
+        "TIMIT/TRAIN/DR?/*/*.WAV"
+    ],
+    "test_regex": [
+        "TIMIT/TEST/DR?/*/*.WAV"
+    ],
+    "noise_regex": [
+        "Nonspeech/*.wav"
+    ],
+    "visualize": "visual"
+}

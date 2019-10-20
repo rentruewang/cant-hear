@@ -1,0 +1,24 @@
+{
+    "enc_prenet_features": [
+        256,
+        128
+    ],
+    "dec_prenet_features": [
+        256,
+        128
+    ],
+    "conv_project_size": [
+        128,
+        128
+    ],
+    "enc_rnn_size": 128,
+    "enc_rnn_layers": 1,
+    "enc_K": 16,
+    "dec_K": 16,
+    "reduce_factor": 4,
+    "main_rnn_size": 256,
+    "main_rnn_layers": 2,
+    "negative_slope": 0.2,
+    "enc_cbhg_maxpool": true,
+    "dec_cbhg_maxpool": true
+}
