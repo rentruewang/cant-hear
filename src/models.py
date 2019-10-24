@@ -82,7 +82,7 @@ class PreNet(nn.Module):
                 )
                 for in_size, out_size in zip(in_features, out_features)
             ),
-            (),
+            tuple(),
         )
         self.layers = nn.ModuleList(layers)
 
@@ -161,7 +161,7 @@ class Decoder(nn.Module):
             input_size=self_rnn, hidden_size=self_rnn, num_layers=rnn_layers
         )
         # self.decoder_attention = AttentionLayer()
-        cbhg_rnn_size, cbhg_rnn_layers = cbhg_rnn
+        (cbhg_rnn_size, cbhg_rnn_layers) = cbhg_rnn
         self.cbhg = CBHG(
             features=self_rnn,
             proj_size=proj_size,
@@ -181,18 +181,18 @@ class Decoder(nn.Module):
     def forward(self, encoded, state_enc, start_token, starting_states, max_len):
         assert max_len % self.R == 0
         decoded = [start_token]
-        state_dec, _state_dec = starting_states
+        (state_dec, _state_dec) = starting_states
         state_enc = state_enc.view(state_enc.size(1), -1)
         for _ in range(max_len // self.R):
             current_decoded = torch.cat(decoded, dim=0)
             reduced_encoded = self.prenet_enc(encoded)
             reduced_decoded = self.prenet_dec(current_decoded)
             transformed_encoded = self.prenet_enc_transform(reduced_encoded)
-            state_enc, alignment_enc = self.attn_enc(
+            (state_enc, alignment_enc) = self.attn_enc(
                 reduced_encoded[-1], state_enc, transformed_encoded
             )
             transformed_decoded = self.prenet_dec_transform(reduced_decoded)
-            state_dec, alignment_dec = self.attn_dec(
+            (state_dec, alignment_dec) = self.attn_dec(
                 reduced_decoded[-1], state_dec, transformed_decoded
             )
             concat = torch.cat(
@@ -202,17 +202,17 @@ class Decoder(nn.Module):
             concat = self.pre_decoder_rnn(concat)
             concat = self.leaky_relu(concat)
             concat = concat.transpose(0, 1)
-            dec_out, _state_dec = self.decoder_rnn(concat, _state_dec)
+            (dec_out, _state_dec) = self.decoder_rnn(concat, _state_dec)
             dec_out = dec_out + concat
             sizes = dec_out.size()
             dec_out = self.leaky_relu(dec_out)
             dec_out = self.multiple_frames(dec_out)
             dec_out = dec_out.view(self.R, *sizes[1:])
             decoded.append(dec_out)
-            state_enc, state_dec = state_enc.squeeze(1), state_dec.squeeze(1)
+            (state_enc, state_dec) = (state_enc.squeeze(1), state_dec.squeeze(1))
         decoded = torch.cat(decoded[1:], dim=0)
         decoded = decoded.permute(1, 2, 0)
-        dec_out, _ = self.cbhg(decoded)
+        (dec_out, _) = self.cbhg(decoded)
         dec_out = self.leaky_relu(dec_out)
         out = self.out(dec_out)
         return out

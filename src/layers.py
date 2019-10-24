@@ -84,19 +84,4 @@ class AttentionLayer(nn.Module):
         attention = self.attn(rnn_out, memory)
         attention = F.softmax(attention, dim=1)
         attention = torch.bmm(attention.transpose(1, 2), memory)
-        return rnn_out, attention
-
-
-if __name__ == "__main__":
-    from torch import _C
-
-    _C.set_grad_enabled(False)
-    batch = 13
-    in_size = 17
-    hidden = 19
-    timesteps = 43
-    attn = AttentionLayer(in_size, hidden)
-    qr = torch.randn(batch, in_size)
-    mem = torch.randn(timesteps, batch, hidden)
-    out, att = attn(qr, None, mem)
-    print(out.shape, att.shape)
+        return (rnn_out, attention)

@@ -67,7 +67,7 @@ class Tacotron(nn.Module):
                     ]
                 ),
             ]
-        encoded, state = self.enc(x)
+        (encoded, state) = self.enc(x)
         decoded = self.dec(
             encoded=encoded,
             state_enc=state,

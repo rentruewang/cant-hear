@@ -49,7 +49,7 @@ def pad_layer(inp, layer, is_2d=False):
 
 
 def pixel_shuffle_1d(inp, upscale_factor=2):
-    batch_size, channels, in_width = inp.size()
+    (batch_size, channels, in_width) = inp.size()
     channels //= upscale_factor
 
     out_width = in_width * upscale_factor
@@ -108,7 +108,7 @@ def highway(inp, layers, gates, act):
 
 def RNN(inp, layer):
     inp_permuted = inp.permute(2, 0, 1)
-    out_permuted, _ = layer(inp_permuted)
+    (out_permuted, _) = layer(inp_permuted)
     out_rnn = out_permuted.permute(1, 2, 0)
     return out_rnn
 
@@ -310,12 +310,12 @@ class CBHG(nn.Module):
         self.linear2 = nn.Linear(256, c_out)
 
     def forward(self, x):
-        outs = []
+        outs = list()
         for l in self.conv1s:
             out = pad_layer(x, l)
             out = F.relu(out)
             outs.append(out)
-        bn_outs = []
+        bn_outs = list()
         for out, bn in zip(outs, self.bn1s):
             out = bn(out)
             bn_outs.append(out)
@@ -524,7 +524,7 @@ class Encoder(nn.Module):
         return out
 
     def forward(self, x):
-        outs = []
+        outs = list()
         for l in self.conv1s:
             out = pad_layer(x, l)
             outs.append(out)
