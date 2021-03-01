@@ -39,9 +39,7 @@ class NoGrad(autograd.Function):
 
 
 @autograd.no_grad()
-def signal_noise_ratio(
-    clean: torch.Tensor, output: torch.Tensor
-) -> (torch.Tensor, torch.Tensor):
+def signal_noise_ratio(clean: torch.Tensor, output: torch.Tensor) -> tuple:
     noise = output - clean
     power_clean = (clean ** 2).sum()
     power_noise = (noise ** 2).sum()
