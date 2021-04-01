@@ -1,3 +1,5 @@
+import functools as ft
+
 import numpy as np
 import torch
 from numpy import random as np_random
@@ -9,7 +11,11 @@ from . import utils
 
 
 def apply(fn) -> object:
-    return lambda obj: fn(obj)
+    @ft.wraps(fn)
+    def function(obj):
+        return fn(obj)
+
+    return function
 
 
 @apply(lambda cls: cls.apply)

@@ -2,5 +2,6 @@ librosa
 matplotlib
 numpy
 pandas
+scipy
 torch
 tqdm
