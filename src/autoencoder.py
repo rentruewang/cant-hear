@@ -133,6 +133,7 @@ def append_emb(emb, expand_size, output):
 
 class SpeakerClassifier(nn.Module):
     "This model tells you who is speaking"
+
     def __init__(self, c_in=512, c_h=512, n_class=8, dp=0.1, ns=0.01):
         super().__init__()
         self.dp, self.ns = dp, ns
@@ -188,6 +189,7 @@ class SpeakerClassifier(nn.Module):
 
 class CBHG(nn.Module):
     "CBHG network"
+
     def __init__(self, c_in=80, c_out=513):
         super().__init__()
         self.conv1s = nn.ModuleList(
@@ -240,6 +242,7 @@ class CBHG(nn.Module):
 
 class Decoder(nn.Module):
     "Decoder of the original voice"
+
     def __init__(self, c_in=512, c_out=513, c_h=512, emb_size=128, ns=0.2):
         super().__init__()
         self.ns = ns
@@ -332,6 +335,7 @@ class Decoder(nn.Module):
 
 class Encoder(nn.Module):
     "Encode the input voice"
+
     def __init__(
         self, c_in=513, c_h1=128, c_h2=512, c_h3=128, ns=0.2, dp=0.3, emb_size=128
     ):
@@ -473,6 +477,7 @@ class Encoder(nn.Module):
 
 class Model(nn.Module):
     "Encode then decode the input"
+
     def __init__(
         self,
         connection: str,

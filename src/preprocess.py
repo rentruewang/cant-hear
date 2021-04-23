@@ -28,7 +28,7 @@ if __name__ == "__main__":
     major_configs = json.load(fp=open(file=flags.major_configs, mode="r"))
     path_configs = json.load(fp=open(file=flags.path_configs, mode="r"))
 
-    normal, signal = flags.normal, flags.signal
+    (normal, signal) = flags.normal, flags.signal
     visual = flags.visual
     normalize = flags.normalize
     spec_norm = flags.power
@@ -269,7 +269,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (data, utils.name(vis_sub_train, file, "clean.png"))
-                            for data, file in zip(fd_clean_train, train_files)
+                            for (data, file) in zip(fd_clean_train, train_files)
                         ),
                         total=len(train_files),
                         message="drawing training spectrogram.",
@@ -280,7 +280,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (data, utils.name(vis_sub_test, file, "clean.png"))
-                            for data, file in zip(fd_clean_test, test_files)
+                            for (data, file) in zip(fd_clean_test, test_files)
                         ),
                         total=len(test_files),
                         message="drawing testing spectrogram.",
@@ -291,7 +291,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (data, utils.name(vis_sub_noise, file, "clean.png"))
-                            for data, file in zip(fd_noise, noise_files)
+                            for (data, file) in zip(fd_noise, noise_files)
                         ),
                         total=len(noise_files),
                         message="drawing noise spectrogram.",
@@ -303,7 +303,7 @@ if __name__ == "__main__":
                         utils.progbar(
                             iterable=(
                                 (data, utils.name(vis_sub_train, file, "mel_clean.png"))
-                                for data, file in zip(mel_fd_clean_train, train_files)
+                                for (data, file) in zip(mel_fd_clean_train, train_files)
                             ),
                             total=len(train_files),
                             message="drawing mel training spectrogram.",
@@ -314,7 +314,7 @@ if __name__ == "__main__":
                         utils.progbar(
                             iterable=(
                                 (data, utils.name(vis_sub_test, file, "mel_clean.png"))
-                                for data, file in zip(mel_fd_clean_test, test_files)
+                                for (data, file) in zip(mel_fd_clean_test, test_files)
                             ),
                             total=len(test_files),
                             message="drawing mel testing spectrogram.",
@@ -325,7 +325,7 @@ if __name__ == "__main__":
                         utils.progbar(
                             iterable=(
                                 (data, utils.name(vis_sub_noise, file, "mel_clean.png"))
-                                for data, file in zip(mel_fd_noise, noise_files)
+                                for (data, file) in zip(mel_fd_noise, noise_files)
                             ),
                             total=len(noise_files),
                             message="drawing mel noise spectrogram.",
@@ -566,7 +566,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (data, utils.name(vis_sub_train, file, "dirty.png"))
-                            for data, file in zip(train_data, train_files)
+                            for (data, file) in zip(train_data, train_files)
                         ),
                         total=len(train_data),
                         message="drawing training data.",
@@ -577,7 +577,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (data, utils.name(vis_sub_test, file, "dirty.png"))
-                            for data, file in zip(test_data, test_files)
+                            for (data, file) in zip(test_data, test_files)
                         ),
                         total=len(test_data),
                         message="drawing testing data.",
@@ -589,7 +589,7 @@ if __name__ == "__main__":
                         utils.progbar(
                             iterable=(
                                 (data, utils.name(vis_sub_train, file, "mel_dirty.png"))
-                                for data, file in zip(mel_train_data, train_files)
+                                for (data, file) in zip(mel_train_data, train_files)
                             ),
                             total=len(train_data),
                             message="drawing mel training data.",
@@ -600,7 +600,7 @@ if __name__ == "__main__":
                         utils.progbar(
                             iterable=(
                                 (data, utils.name(vis_sub_test, file, "mel_dirty.png"))
-                                for data, file in zip(mel_test_data, test_files)
+                                for (data, file) in zip(mel_test_data, test_files)
                             ),
                             total=len(test_data),
                             message="drawing mel testing data.",

@@ -5,6 +5,7 @@ from models import Decoder, Encoder
 
 class Tacotron(nn.Module):
     "Tacotron 2 model"
+
     def __init__(
         self,
         n_channels,

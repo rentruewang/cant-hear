@@ -1,4 +1,9 @@
+.vscode/
 .DS_Store
+
+.mypy_cache/
+*.pyc
+
 DEMAND
 TIMIT
 Nonspeech

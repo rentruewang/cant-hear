@@ -32,7 +32,7 @@ class CBHG(nn.Module):
                 padding=1,
                 activation=activ,
             )
-            for in_size, out_size, activ in zip(
+            for (in_size, out_size, activ) in zip(
                 (K * features, *proj_size[:-1]),
                 proj_size,
                 (nn.LeakyReLU(negative_slope=ns) for _ in range(len(proj_size) - 1))
@@ -69,6 +69,7 @@ class CBHG(nn.Module):
 
 class PreNet(nn.Module):
     "Encoder's door step"
+
     def __init__(self, features, ns):
         super().__init__()
         in_features = features[:-1]
@@ -81,7 +82,7 @@ class PreNet(nn.Module):
                     nn.LeakyReLU(negative_slope=ns),
                     nn.Dropout(0.5),
                 )
-                for in_size, out_size in zip(in_features, out_features)
+                for (in_size, out_size) in zip(in_features, out_features)
             ),
             (),
         )
@@ -97,6 +98,7 @@ class PreNet(nn.Module):
 
 class Encoder(nn.Module):
     "Encoder of tactron"
+
     def __init__(
         self,
         n_channels,
@@ -131,6 +133,7 @@ class Encoder(nn.Module):
 
 class Decoder(nn.Module):
     "Decoder of tactron"
+
     def __init__(
         self,
         prenet_units,
@@ -145,7 +148,7 @@ class Decoder(nn.Module):
         ns,
     ):
         super().__init__()
-        prev_rnn, self_rnn = hidden_sizes
+        (prev_rnn, self_rnn) = hidden_sizes
         self.prenet_enc = PreNet(features=[2 * prev_rnn] + list(prenet_units), ns=ns)
         self.prenet_dec = PreNet(features=[self_rnn] + list(prenet_units), ns=ns)
         self.prenet_dec_transform = nn.Linear(

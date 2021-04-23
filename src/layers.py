@@ -5,6 +5,7 @@ from torch.nn import functional as F
 
 class Squeeze(nn.Module):
     "Performs squeezing on the tensor"
+
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
@@ -16,6 +17,7 @@ class Squeeze(nn.Module):
 
 class HighWay(nn.Module):
     "Highway network"
+
     def __init__(self, features, ns):
         super().__init__()
         self.T = nn.Linear(in_features=features, out_features=features)
@@ -32,6 +34,7 @@ class HighWay(nn.Module):
 
 class Conv1dNorm(nn.Sequential):
     "Convolution1d and Norm"
+
     def __init__(
         self,
         in_channels,
@@ -60,12 +63,14 @@ class Conv1dNorm(nn.Sequential):
 
 class TanhAttention(nn.Module):
     "Attention using tanh"
+
     def __init__(self, features):
         super().__init__()
         self.query = nn.Linear(in_features=features, out_features=features)
         self.value = nn.Linear(in_features=features, out_features=1)
 
     def forward(self, query, memory):
+        "Pass through"
         query = self.query(query)
         alignment = self.value(torch.tanh(query + memory))
         return alignment
@@ -73,6 +78,7 @@ class TanhAttention(nn.Module):
 
 class AttentionLayer(nn.Module):
     "Attention layer"
+
     def __init__(self, input_size, hidden_size):
         super().__init__()
         self.rnn = nn.GRUCell(input_size=input_size, hidden_size=hidden_size)

@@ -1,20 +1,16 @@
-import itertools
 import json
 import os
 from argparse import ArgumentParser
 from collections import defaultdict
 from os import path as os_path
 
-import pandas as pd
 import torch
 from torch import autograd, cuda, nn, optim
-from torch.nn import functional as F
-from torch.nn import utils as nn_utils
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from . import init, losses, utils
-from .autoencoder import Decoder, Encoder, Model, PatchDiscriminator
+from . import init, losses
+from .autoencoder import Model, PatchDiscriminator
 from .datasets import PairedDataset
 from .losses import ReconstructionLoss
 from .utils import ScalarRecorder
@@ -22,7 +18,8 @@ from .utils import ScalarRecorder
 
 def get_model(connection: str, **configs: dict) -> nn.Module:
     "Create the model from configs"
-    return nn.ModuleList(Model(connection) for _ in range(configs["num_models"]))
+    num_models = configs["num_models"]
+    return nn.ModuleList(Model(connection) for _ in range(num_models))
 
 
 def train(

@@ -1,16 +1,13 @@
 import functools
-import itertools
-import json
 import os
-from collections import defaultdict
 from os import path as os_path
 
 import librosa
 import numpy as np
+import torch
 from librosa import effects
 from librosa import feature as librosa_feature
 from librosa import util as librosa_util
-from matplotlib import pyplot as plt
 from numpy import random as np_random
 from torch import nn
 from tqdm import tqdm
@@ -156,7 +153,7 @@ def generate_noises(
     ending_indices = starting_indices + lengths
     ending_indices[ending_indices > target_length] = target_length
     lengths = ending_indices - starting_indices
-    selected = tuple(crop1d(a, l) for a, l in zip(selected, lengths))
+    selected = tuple(crop1d(a, l) for (a, l) in zip(selected, lengths))
     weights = softmax(np_random.randn(len(indices)) / T, 0)
     return mixing1d(selected, starting_indices, weights, target_length)
 

@@ -15,7 +15,7 @@ import seaborn as sns
 import torch
 from matplotlib import pyplot as plt
 from scipy.io import wavfile
-from torch import _C, cuda, nn
+from torch import cuda, nn
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -275,7 +275,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-d", "--device", type=str)
     parser.add_argument("-p", "--path", type=str)
-    parser.add_argument("-P", "--processes", type=int, default=None)
+    parser.add_argument("-P", "--processes", type=int, default=0)
     parser.add_argument("-n", "--samples", type=int, default=128)
     parser.add_argument("-i", "--inference", type=str)
     parser.add_argument("-t", "--target", type=str, default="out")
@@ -284,17 +284,16 @@ if __name__ == "__main__":
     external = parser.add_argument_group("external")
     external.add_argument("-pesq", "--pesq", action="store_true")
     external.add_argument("-stoi", "--stoi", action="store_true")
-    # external.add_argument("-ssnr", "--ssnr", action="store_true")
     flags = parser.parse_args()
 
     sns.set()
 
-    _C.set_grad_enabled(False)
+    torch.set_grad_enabled(False)
 
     configs = json.load(fp=open(file=flags.config, mode="r"))
     path = flags.path
     processes = flags.processes or os.cpu_count()
-    train_path, test_path = os_path.join(path, "train"), os_path.join(path, "test")
+    (train_path, test_path) = os_path.join(path, "train"), os_path.join(path, "test")
     device = flags.device if cuda.is_available() else "cpu"
     samples = flags.samples
     sr = configs["sr"]
@@ -308,15 +307,12 @@ if __name__ == "__main__":
     use_pesq = flags.pesq
     use_stoi = flags.stoi
 
-    (pesq, stoi) = (flags.pesq, flags.stoi)
-    external = any((pesq, stoi))
-
     external_functions = []
-    if flags.pesq:
+    if use_pesq:
         from external import pesq
 
         external_functions.append(("pesq", pesq.pesq, {"sr": sr}))
-    if flags.stoi:
+    if use_stoi:
         from external import stoi
 
         external_functions.append(("stoi", stoi.stoi, {"sr": sr}))
