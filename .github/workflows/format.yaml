@@ -4,7 +4,9 @@ jobs:
   format-all:
     runs-on: ubuntu-latest
     steps:
-      # Black (Python) part
+      - name: 🔔 Check out
+        uses: actions/checkout@v2
+    
       - name: 🏗️ python 3.8
         uses: actions/setup-python@v2
         with:
@@ -14,7 +16,6 @@ jobs:
       - name: 🏃 black
         run: black .
 
-      # Add and commit all
       - name: ⬆️ Add and Commit
         uses: EndBug/add-and-commit@v7
         with:
