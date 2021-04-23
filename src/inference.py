@@ -1,13 +1,13 @@
 import functools
 import glob
-import itertools
 import json
 import logging
 import os
 import types
 from argparse import ArgumentParser
-from multiprocessing import Pool
+from multiprocessing.pool import Pool
 from os import path as os_path
+from typing import Sequence
 
 import librosa
 import numpy as np
@@ -20,12 +20,13 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from . import losses, present
+from . import present
 from .autoencoder import Model
 from .datasets import PairedDataset
 
 
 def _snr(reference: np.ndarray, tensor: np.ndarray) -> float:
+    "Signal to noise ratio"
     assert reference.shape == tensor.shape, (reference.shape, tensor.shape)
     noise_pow = ((tensor - reference) ** 2).sum()
     ref_pow = (reference ** 2).sum()
@@ -33,6 +34,7 @@ def _snr(reference: np.ndarray, tensor: np.ndarray) -> float:
 
 
 def _prepare_model(model_config: dict, device: str) -> nn.Module:
+    "Load model from disk according to config"
     state_dict = model_config["state"]
     len_model = model_config["len"]
     connection = model_config["connection"]
@@ -45,7 +47,7 @@ def _prepare_model(model_config: dict, device: str) -> nn.Module:
 
 
 def spec_wav(data: np.ndarray or tuple, fname: str, configs: dict, dirs: tuple):
-    if isinstance(data, (tuple, list)):
+    if isinstance(data, Sequence):
         for (idx, entry) in enumerate(data):
             spec_wav(entry, fname + f"_{idx:02d}", configs, dirs)
     else:
@@ -84,7 +86,7 @@ def inference(
     griffinlim: types.FunctionType = None,
     waveform_metrics: list = [],
     logger: logging.Logger = None,
-) -> None:
+):
     ((clean_train, dirty_train), (clean_test, dirty_test)) = data
     assert (
         clean_train.shape == dirty_train.shape == clean_test.shape == dirty_test.shape
@@ -95,7 +97,7 @@ def inference(
 
     model = _prepare_model(model_config=model_config, device=device)
 
-    out_list = list()
+    out_list = []
     for i in in_list:
         _list = [i]
         for layer in model:
@@ -135,7 +137,7 @@ def inference(
     )
 
     logger.info("applying l1")
-    l1_list = tuple(
+    l1_list = (
         tuple(l1_loss(input=t, target=r).item() for t in entry)
         for (r, entry) in zip(reference, out_list)
     )
@@ -146,7 +148,7 @@ def inference(
     )
 
     logger.info("applying l2")
-    l2_list = tuple(
+    l2_list = (
         tuple(l2_loss(input=t, target=r).item() for t in entry)
         for (r, entry) in zip(reference, out_list)
     )
@@ -160,12 +162,12 @@ def inference(
     if len(waveform_metrics) != 0:
         pool = None if processes == 1 else Pool(processes=processes)
         logger.info("transforming to waveform")
-        wave_list = tuple(tuple(griffinlim(o, pool) for o in out) for out in out_list)
-        wave_ref = tuple(griffinlim(r, pool) for r in reference)
+        wave_list = (tuple(griffinlim(o, pool) for o in out) for out in out_list)
+        wave_ref = (griffinlim(r, pool) for r in reference)
         for (metric, func, default) in waveform_metrics:
-            default = default or dict()
+            default = default or {}
             logger.info(f"applying {metric}")
-            value_list = tuple(
+            value_list = (
                 tuple(func(ref=r, deg=t, pool=pool, **default) for t in entry)
                 for (r, entry) in zip(wave_ref, wave_list)
             )
@@ -176,7 +178,6 @@ def inference(
             )
         if pool is not None:
             pool.close()
-        del pool
 
     if metric_only:
         return
@@ -187,26 +188,36 @@ def inference(
     voc_dir = os_path.join(target_dir, "voc")
     os.makedirs(name=voc_dir, exist_ok=True)
 
-    print("saving sepctrograms and waves")
+    print("saving spectrograms and waves")
     pool = None if processes == 1 else Pool(processes=processes)
-    for (
-        i,
-        (c_train, c_train_o, d_train, d_train_o, c_test, c_test_o, d_test, d_test_o),
-    ) in tqdm(
-        enumerate(
-            zip(
-                clean_train,
-                zip(*clean_train_out),
-                dirty_train,
-                zip(*dirty_train_out),
-                clean_test,
-                zip(*clean_test_out),
-                dirty_test,
-                zip(*dirty_test_out),
-            )
-        ),
+
+    # Convert data into an iterator
+    data_iter = zip(
+        clean_train,
+        zip(*clean_train_out),
+        dirty_train,
+        zip(*dirty_train_out),
+        clean_test,
+        zip(*clean_test_out),
+        dirty_test,
+        zip(*dirty_test_out),
+    )
+
+    for (i, packed_data) in tqdm(
+        enumerate(data_iter),
         total=len(clean_train),
     ):
+
+        (
+            c_train,
+            c_train_o,
+            d_train,
+            d_train_o,
+            c_test,
+            c_test_o,
+            d_test,
+            d_test_o,
+        ) = packed_data
 
         name_list = (
             f"c_train_{i:02d}",
@@ -246,12 +257,11 @@ def inference(
 
 def clear_relative(path: str) -> str:
     index = 0
-    while path[index] == "." and index < len(path):
+    while index < len(path) and path[index] == ".":
         index += 1
-        while path[index] == "/" and index < len(path):
+        while index < len(path) and path[index] == "/":
             index += 1
-    else:
-        return path[index:]
+    return path[index:]
 
 
 if __name__ == "__main__":
@@ -273,7 +283,6 @@ if __name__ == "__main__":
     # external.add_argument("-ssnr", "--ssnr", action="store_true")
     flags = parser.parse_args()
 
-    plt.ioff()
     sns.set()
 
     _C.set_grad_enabled(False)
@@ -298,8 +307,7 @@ if __name__ == "__main__":
     (pesq, stoi) = (flags.pesq, flags.stoi)
     external = any((pesq, stoi))
 
-    # TODO
-    external_functions = list()
+    external_functions = []
     if flags.pesq:
         from external import pesq
 
@@ -329,6 +337,7 @@ if __name__ == "__main__":
 
     logger = logging.getLogger()
 
+    @functools.wraps(librosa.griffinlim)
     def griffinlim(S: np.ndarray, pool: Pool = None) -> np.ndarray:
         if S.ndim == 2:
             return librosa.griffinlim(
@@ -348,21 +357,19 @@ if __name__ == "__main__":
                         ),
                     )
                 )
-            else:
-                return np.stack(
-                    tuple(
-                        librosa.griffinlim(
-                            S=_S,
-                            n_iter=n_iter,
-                            hop_length=hop_length,
-                            win_length=win_length,
-                            window=window,
-                        )
-                        for _S in S
-                    )
+
+            return np.stack(
+                librosa.griffinlim(
+                    S=_S,
+                    n_iter=n_iter,
+                    hop_length=hop_length,
+                    win_length=win_length,
+                    window=window,
                 )
-        else:
-            raise ValueError
+                for _S in S
+            )
+
+        raise ValueError("Unreachable")
 
     for to_infer in inference_list:
         # summary

@@ -1,8 +1,5 @@
-import torch
 from torch import nn
-from torch.nn import functional as F
 
-from layers import Conv1dNorm, TanhAttention
 from models import Decoder, Encoder
 
 
@@ -52,11 +49,11 @@ class Tacotron(nn.Module):
         )
 
     def forward(self, x, max_len, start_token=None, starting_states=None):
-        if start_token == None:
+        if start_token is None:
             start_token = x.new_zeros(
                 size=[1, len(x), self.dec.decoder_rnn.hidden_size]
             )
-        if starting_states == None:
+        if starting_states is None:
             starting_states = [
                 x.new_zeros(size=[len(x), 2 * self.enc.cbhg.rnn.hidden_size]),
                 x.new_zeros(

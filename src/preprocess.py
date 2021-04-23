@@ -6,7 +6,6 @@ from argparse import ArgumentParser
 from multiprocessing import Pool
 from os import path as os_path
 
-import librosa
 import numpy as np
 from numpy import random as np_random
 
@@ -40,9 +39,9 @@ if __name__ == "__main__":
         assert flags.power == 2
 
     mode = []
-    if normal != None:
+    if normal is not None:
         mode.extend(["normal", f"{normal}"])
-    if signal != None:
+    if signal is not None:
         mode.extend(["signal", f"{signal}"])
     mode = "_".join(mode)
     if not normalize:
@@ -333,7 +332,7 @@ if __name__ == "__main__":
                         ),
                     )
 
-        if normal != None:
+        if normal is not None:
             td_dirty_train_N = tuple(
                 utils.progbar(
                     iterable=(np_random.randn(*t.shape) for t in td_clean_train),
@@ -372,7 +371,7 @@ if __name__ == "__main__":
         else:
             td_dirty_train_N = td_dirty_test_N = itertools.repeat(0)
 
-        if signal != None:
+        if signal is not None:
             index_sample_train = tuple(
                 utils.progbar(
                     iterable=(

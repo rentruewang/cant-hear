@@ -1,4 +1,3 @@
-import torch
 from torch import nn
 from torch.nn import init as nn_init
 

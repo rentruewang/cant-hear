@@ -1,7 +1,5 @@
 import torch
 from torch import nn
-from torch.nn import functional as F
-from torch.nn import init as nn_init
 
 from .layers import AttentionLayer, Conv1dNorm, HighWay
 
@@ -35,13 +33,13 @@ class CBHG(nn.Module):
             for in_size, out_size, activ in zip(
                 (K * features, *proj_size[:-1]),
                 proj_size,
-                [nn.LeakyReLU(negative_slope=ns) for _ in range(len(proj_size) - 1)]
+                (nn.LeakyReLU(negative_slope=ns) for _ in range(len(proj_size) - 1))
                 + [None],
             )
         ]
         self.conv_proj = nn.ModuleList(conv_proj)
         self.pre_highway = nn.Linear(in_features=proj_size[-1], out_features=features)
-        self.highways = nn.ModuleList([HighWay(features, ns=ns) for _ in range(4)])
+        self.highways = nn.ModuleList(HighWay(features, ns=ns) for _ in range(4))
         self.rnn = nn.GRU(
             input_size=features,
             hidden_size=rnn_size,
@@ -52,8 +50,7 @@ class CBHG(nn.Module):
     def forward(self, x):
         # x : batch, features, timesteps
         timesteps = x.size(-1)
-        outs = [conv(x)[..., :timesteps] for conv in self.conv_banks]
-        outs = torch.cat(outs, dim=1)
+        outs = torch.cat([conv(x)[..., :timesteps] for conv in self.conv_banks], dim=1)
         try:
             outs = self.maxpool1d(outs)[..., :timesteps]
         except AttributeError:
@@ -82,11 +79,12 @@ class PreNet(nn.Module):
                 )
                 for in_size, out_size in zip(in_features, out_features)
             ),
-            tuple(),
+            (),
         )
         self.layers = nn.ModuleList(layers)
 
     def forward(self, x):
+        # Pass through all layers
         for layer in self.layers:
             x = layer(x)
         return x

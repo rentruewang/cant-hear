@@ -1,13 +1,10 @@
 import functools as ft
 
-import numpy as np
 import torch
 from numpy import random as np_random
 from torch import autograd, nn
 from torch.nn import functional as F
 from torch.nn import utils as nn_utils
-
-from . import utils
 
 
 def apply(fn) -> object:
@@ -40,7 +37,7 @@ class NoGrad(autograd.Function):
         return x
 
     @staticmethod
-    def backward(ctx, *grad_outputs: tuple) -> None:
+    def backward(ctx, *grad_outputs: tuple):
         return None
 
 
@@ -138,7 +135,7 @@ def ambient(
     assert train or not max_norm
     (model, model_optim) = model
     (amb, amb_optim) = amb
-    (clean, dirty) = data
+    (_, dirty) = data
     (dropout, scale) = measure_info
 
     for _ in range(wgan_ratio):

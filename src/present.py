@@ -1,7 +1,6 @@
 from librosa import display as librosa_display
 from matplotlib import pyplot as plt
 from scipy.io import wavfile
-from tqdm import tqdm
 
 
 def wavfile_multi_write(filename, rate, data):

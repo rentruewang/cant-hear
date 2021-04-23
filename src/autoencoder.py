@@ -1,24 +1,16 @@
-import os
-from functools import reduce
-from itertools import chain
-from operator import mul
-from os import path as os_path
+from typing import Sequence
 
-import numpy as np
 import torch
-from torch import cuda, nn, optim
-from torch.autograd import Variable
+from torch import nn
 from torch.nn import functional as F
-from torch.nn import utils as nn_utils
-from torch.utils import data
-from tqdm import tqdm
 
-from .init import init
 from .layers import Squeeze
 
 
 def pad_layer(inp, layer, is_2d=False):
-    if isinstance(layer.kernel_size, tuple):
+    "Pad the input and pass it through the layer"
+
+    if isinstance(layer.kernel_size, Sequence):
         kernel_size = layer.kernel_size[0]
     else:
         kernel_size = layer.kernel_size
@@ -60,7 +52,7 @@ def pixel_shuffle_1d(inp, upscale_factor=2):
 
 
 def upsample(x, scale_factor=2):
-    x_up = F.interpolate(x, scale_factor=2, mode="nearest")
+    x_up = F.interpolate(x, scale_factor, mode="nearest")
     return x_up
 
 
@@ -95,7 +87,7 @@ def highway(inp, layers, gates, act):
     out_expand = inp_permuted.contiguous().view(
         batch_size * seq_len, inp_permuted.size(2)
     )
-    for l, g in zip(layers, gates):
+    for (l, g) in zip(layers, gates):
         H = l(out_expand)
         H = act(H)
         T = g(out_expand)
@@ -178,7 +170,7 @@ class PatchDiscriminator(nn.Module):
             logits = self.conv_classify(out)
             print(logits.size())
             logits = logits.view(logits.size(0), -1)
-            return mean_val, logits
+            return (mean_val, logits)
         else:
             return mean_val
 
@@ -292,9 +284,9 @@ class CBHG(nn.Module):
     def __init__(self, c_in=80, c_out=513):
         super().__init__()
         self.conv1s = nn.ModuleList(
-            [nn.Conv1d(c_in, 128, kernel_size=k) for k in range(1, 9)]
+            nn.Conv1d(c_in, 128, kernel_size=k) for k in range(1, 9)
         )
-        self.bn1s = nn.ModuleList([nn.BatchNorm1d(128) for _ in range(1, 9)])
+        self.bn1s = nn.ModuleList(nn.BatchNorm1d(128) for _ in range(1, 9))
         self.mp1 = nn.MaxPool1d(kernel_size=2, stride=1)
         self.conv2 = nn.Conv1d(len(self.conv1s) * 128, 256, kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm1d(256)
@@ -302,21 +294,21 @@ class CBHG(nn.Module):
         self.bn3 = nn.BatchNorm1d(80)
         # highway network
         self.linear1 = nn.Linear(80, 128)
-        self.layers = nn.ModuleList([nn.Linear(128, 128) for _ in range(4)])
-        self.gates = nn.ModuleList([nn.Linear(128, 128) for _ in range(4)])
+        self.layers = nn.ModuleList(nn.Linear(128, 128) for _ in range(4))
+        self.gates = nn.ModuleList(nn.Linear(128, 128) for _ in range(4))
         self.RNN = nn.GRU(
             input_size=128, hidden_size=128, num_layers=1, bidirectional=True
         )
         self.linear2 = nn.Linear(256, c_out)
 
     def forward(self, x):
-        outs = list()
+        outs = []
         for l in self.conv1s:
             out = pad_layer(x, l)
             out = F.relu(out)
             outs.append(out)
-        bn_outs = list()
-        for out, bn in zip(outs, self.bn1s):
+        bn_outs = []
+        for (out, bn) in zip(outs, self.bn1s):
             out = bn(out)
             bn_outs.append(out)
         out = torch.cat(bn_outs, dim=1)
@@ -433,7 +425,7 @@ class Encoder(nn.Module):
         super().__init__()
         self.ns = ns
         self.conv1s = nn.ModuleList(
-            [nn.Conv1d(c_in, c_h1, kernel_size=k) for k in range(1, 8)]
+            nn.Conv1d(c_in, c_h1, kernel_size=k) for k in range(1, 8)
         )
         self.conv2 = nn.Conv1d(len(self.conv1s) * c_h1 + c_in, c_h2, kernel_size=1)
         self.emb2 = nn.Sequential(
@@ -524,7 +516,7 @@ class Encoder(nn.Module):
         return out
 
     def forward(self, x):
-        outs = list()
+        outs = []
         for l in self.conv1s:
             out = pad_layer(x, l)
             outs.append(out)
@@ -567,8 +559,8 @@ class Model(nn.Module):
     def __init__(
         self,
         connection: str,
-        enc_kwargs: dict = dict(),
-        dec_kwargs: dict = dict(),
+        enc_kwargs: dict = {},
+        dec_kwargs: dict = {},
         emb_size: tuple = (128,),
     ):
         super().__init__()
@@ -577,17 +569,16 @@ class Model(nn.Module):
         self.connection = connection
         self.emb = nn.Parameter(torch.zeros(emb_size), requires_grad=True)
 
-    def forward(self, x, normalize_dim=-1):
+    def forward(self, x):
         (e, c) = self.enc(x)
 
         if self.connection == "normal":
             pass
         elif self.connection == "emb":
-            c = [torch.stack([self.emb] * len(c[0]), dim=0)] * len(c)
+            c = tuple(torch.stack([self.emb] * len(c[0]), dim=0)) * len(c)
         elif self.connection == "zero":
             c = (_con.new_zeros(_con.shape) for _con in c)
         else:
             raise ValueError
 
-        o = self.dec(e, c)
-        return o
+        return self.dec(e, c)

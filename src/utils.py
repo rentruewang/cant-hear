@@ -3,7 +3,6 @@ import itertools
 import json
 import os
 from collections import defaultdict
-from numbers import Number
 from os import path as os_path
 
 import librosa
@@ -14,7 +13,6 @@ from librosa import util as librosa_util
 from matplotlib import pyplot as plt
 from numpy import random as np_random
 from torch import nn
-from torch.nn import init as nn_init
 from tqdm import tqdm
 
 
@@ -24,7 +22,7 @@ def progbar(iterable, total: int, message: str) -> tqdm:
     return tqdm(iterable=iterable, total=total)
 
 
-def terminate_on_nan(module: nn.Module, grad_input: tuple, grad_output: tuple) -> bool:
+def terminate_on_nan(_: nn.Module, grad_input: tuple, grad_output: tuple) -> bool:
     nan_in = ((g is None or torch.isnan(g)) for g in grad_input)
     nan_out = ((g is None or torch.isnan(g)) for g in grad_output)
     if any(nan_in) or any(nan_out):
@@ -185,10 +183,10 @@ def remove_folder(folder: str):
 
 
 class Dummy:
-    def __dummy(self, *args, **kwargs):
-        return
+    def __dummy(self, *_):
+        pass
 
-    def __getattribute__(self, attr: str):
+    def __getattribute__(self, _: str):
         return object.__getattribute__(self, "_DummyWriter__dummy")
 
 
@@ -198,7 +196,7 @@ class ScalarRecorder:
         self.data = defaultdict(list)
         self.tag_count = defaultdict(lambda: itertools.count(start=1, step=1))
 
-    def __call__(self, tag: str, value: dict) -> None:
+    def __call__(self, tag: str, value: dict):
         for (key, val) in value.items():
             this_tag = f"{tag}/{key}"
             self.data[this_tag].append(val)

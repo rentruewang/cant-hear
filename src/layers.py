@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
-from torch.nn import init as nn_init
 
 
 class Squeeze(nn.Module):

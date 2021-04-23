@@ -1,11 +1,9 @@
-import functools
 import glob
 from multiprocessing.pool import ThreadPool
 
 import numpy as np
-import torch
 from numpy import random as np_random
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
 
 def _dump_too_short(array: np.ndarray, target_len: int, dim: int = -1) -> np.ndarray:
@@ -25,13 +23,13 @@ def _select_slice(array: np.ndarray, max_len: int, dim: int = -1) -> np.ndarray:
 
 class MapWrapper(object):
     def __init__(self, *args, **kwargs):
-        object.__init__(self)
+        object.__init__(self, *args, **kwargs)
 
     def map(self, func, iterable):
-        return list(func(i) for i in iterable)
+        return [func(i) for i in iterable]
 
     def starmap(self, func, iterable):
-        return list(func(*i) for i in iterable)
+        return [func(*i) for i in iterable]
 
 
 class PairedDataset(Dataset):
@@ -63,10 +61,10 @@ class PairedDataset(Dataset):
         dirty_arrays = self.pool.map(np.load, dirty_files)
         assert len(clean_arrays) == len(dirty_arrays)
 
-        clean_arrays = (_dump_too_short(arr, time_steps) for arr in clean_arrays)
-        clean_arrays = tuple(arr for arr in clean_arrays if arr is not False)
-        dirty_arrays = (_dump_too_short(arr, time_steps) for arr in dirty_arrays)
-        dirty_arrays = tuple(arr for arr in dirty_arrays if arr is not False)
+        clean_arrays = (_dump_too_short(arr, time_steps, dim) for arr in clean_arrays)
+        clean_arrays = tuple(arr for arr in clean_arrays if bool(arr))
+        dirty_arrays = (_dump_too_short(arr, time_steps, dim) for arr in dirty_arrays)
+        dirty_arrays = tuple(arr for arr in dirty_arrays if bool(arr))
         assert len(clean_arrays) == len(dirty_arrays)
 
         self.clean_arrays = clean_arrays
@@ -74,6 +72,7 @@ class PairedDataset(Dataset):
 
         self.len = len(clean_arrays)
         self.time_steps = time_steps
+        self.dim = dim
 
     def __len__(self):
         return self.len
@@ -82,7 +81,7 @@ class PairedDataset(Dataset):
         (clean, dirty) = (self.clean_arrays[index], self.dirty_arrays[index])
         return self.pool.starmap(
             func=_select_slice,
-            iterable=((clean, self.time_steps), (dirty, self.time_steps)),
+            iterable=((clean, self.time_steps, self.dim), (dirty, self.time_steps)),
         )
 
 
