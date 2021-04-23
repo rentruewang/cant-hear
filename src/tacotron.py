@@ -4,6 +4,7 @@ from models import Decoder, Encoder
 
 
 class Tacotron(nn.Module):
+    "Tacotron 2 model"
     def __init__(
         self,
         n_channels,
@@ -49,6 +50,7 @@ class Tacotron(nn.Module):
         )
 
     def forward(self, x, max_len, start_token=None, starting_states=None):
+        "Pass through"
         if start_token is None:
             start_token = x.new_zeros(
                 size=[1, len(x), self.dec.decoder_rnn.hidden_size]

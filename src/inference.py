@@ -47,6 +47,7 @@ def _prepare_model(model_config: dict, device: str) -> nn.Module:
 
 
 def spec_wav(data: np.ndarray or tuple, fname: str, configs: dict, dirs: tuple):
+    "Write spectrogram to wavfiles"
     if isinstance(data, Sequence):
         for (idx, entry) in enumerate(data):
             spec_wav(entry, fname + f"_{idx:02d}", configs, dirs)
@@ -69,6 +70,7 @@ def spec_wav(data: np.ndarray or tuple, fname: str, configs: dict, dirs: tuple):
 
 
 def to_numpy(tensor_list):
+    "Convert a torch tensor to an numpy array"
     if isinstance(tensor_list, torch.Tensor):
         return tensor_list.cpu().detach().numpy()
     else:
@@ -87,6 +89,7 @@ def inference(
     waveform_metrics: list = [],
     logger: logging.Logger = None,
 ):
+    "Perform inference with the model"
     ((clean_train, dirty_train), (clean_test, dirty_test)) = data
     assert (
         clean_train.shape == dirty_train.shape == clean_test.shape == dirty_test.shape
@@ -256,6 +259,7 @@ def inference(
 
 
 def clear_relative(path: str) -> str:
+    "Remove './' pattern"
     index = 0
     while index < len(path) and path[index] == ".":
         index += 1

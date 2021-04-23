@@ -5,6 +5,8 @@ from .layers import AttentionLayer, Conv1dNorm, HighWay
 
 
 class CBHG(nn.Module):
+    "CBHG network"
+
     def __init__(self, features, proj_size, rnn_size, rnn_layers, K, ns, max_pooling):
         super().__init__()
         conv_banks = [
@@ -48,6 +50,7 @@ class CBHG(nn.Module):
         )
 
     def forward(self, x):
+        "Pass through"
         # x : batch, features, timesteps
         timesteps = x.size(-1)
         outs = torch.cat([conv(x)[..., :timesteps] for conv in self.conv_banks], dim=1)
@@ -65,6 +68,7 @@ class CBHG(nn.Module):
 
 
 class PreNet(nn.Module):
+    "Encoder's door step"
     def __init__(self, features, ns):
         super().__init__()
         in_features = features[:-1]
@@ -84,6 +88,7 @@ class PreNet(nn.Module):
         self.layers = nn.ModuleList(layers)
 
     def forward(self, x):
+        "Pass through"
         # Pass through all layers
         for layer in self.layers:
             x = layer(x)
@@ -91,6 +96,7 @@ class PreNet(nn.Module):
 
 
 class Encoder(nn.Module):
+    "Encoder of tactron"
     def __init__(
         self,
         n_channels,
@@ -115,6 +121,7 @@ class Encoder(nn.Module):
         )
 
     def forward(self, signal):
+        "Pass through"
         # signal: (batch, features, timesteps)
         signal = signal.transpose(1, 2)
         processed = self.prenet(signal)
@@ -123,6 +130,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
+    "Decoder of tactron"
     def __init__(
         self,
         prenet_units,
@@ -177,6 +185,7 @@ class Decoder(nn.Module):
         self.leaky_relu = nn.LeakyReLU(negative_slope=ns)
 
     def forward(self, encoded, state_enc, start_token, starting_states, max_len):
+        "Pass through"
         assert max_len % self.R == 0
         decoded = [start_token]
         (state_dec, _state_dec) = starting_states

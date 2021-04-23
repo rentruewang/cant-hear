@@ -41,6 +41,7 @@ def pad_layer(inp, layer, is_2d=False):
 
 
 def pixel_shuffle_1d(inp, upscale_factor=2):
+    "Shuffle and upscale the input"
     (batch_size, channels, in_width) = inp.size()
     channels //= upscale_factor
 
@@ -52,11 +53,13 @@ def pixel_shuffle_1d(inp, upscale_factor=2):
 
 
 def upsample(x, scale_factor=2):
+    "Upsample the input"
     x_up = F.interpolate(x, scale_factor, mode="nearest")
     return x_up
 
 
 def GLU(inp, layer, res=True):
+    "Gated linear unit"
     kernel_size = layer.kernel_size[0]
     channels = layer.out_channels // 2
     # padding
@@ -79,6 +82,7 @@ def GLU(inp, layer, res=True):
 
 
 def highway(inp, layers, gates, act):
+    "Highway networks"
     # permute
     batch_size = inp.size(0)
     seq_len = inp.size(2)
@@ -99,6 +103,7 @@ def highway(inp, layers, gates, act):
 
 
 def RNN(inp, layer):
+    "RNN needs no explanation."
     inp_permuted = inp.permute(2, 0, 1)
     (out_permuted, _) = layer(inp_permuted)
     out_rnn = out_permuted.permute(1, 2, 0)
@@ -106,6 +111,7 @@ def RNN(inp, layer):
 
 
 def linear(inp, layer):
+    "Densly connected layer"
     batch_size = inp.size(0)
     hidden_dim = inp.size(1)
     seq_len = inp.size(2)
@@ -118,64 +124,15 @@ def linear(inp, layer):
 
 
 def append_emb(emb, expand_size, output):
+    "Appends the embedding to the input"
     emb = emb.unsqueeze(dim=2)
     emb_expand = emb.expand(emb.size(0), emb.size(1), expand_size)
     output = torch.cat([output, emb_expand], dim=1)
     return output
 
 
-class PatchDiscriminator(nn.Module):
-    def __init__(self, n_class=33, ns=0.2, dp=0.1):
-        super().__init__()
-        self.ns = ns
-        self.conv1 = nn.Conv2d(1, 64, kernel_size=5, stride=2)
-        self.conv2 = nn.Conv2d(64, 128, kernel_size=5, stride=2)
-        self.conv3 = nn.Conv2d(128, 256, kernel_size=5, stride=2)
-        self.conv4 = nn.Conv2d(256, 512, kernel_size=5, stride=2)
-        self.conv5 = nn.Conv2d(512, 512, kernel_size=5, stride=2)
-        self.conv6 = nn.Conv2d(512, 1, kernel_size=1)
-        # self.conv_classify = nn.Conv2d(512, n_class, kernel_size=(17, 4))
-        self.conv_classify = nn.Conv2d(512, n_class, kernel_size=(17, 4))
-        self.drop1 = nn.Dropout2d(p=dp)
-        self.drop2 = nn.Dropout2d(p=dp)
-        self.drop3 = nn.Dropout2d(p=dp)
-        self.drop4 = nn.Dropout2d(p=dp)
-        self.drop5 = nn.Dropout2d(p=dp)
-        self.ins_norm1 = nn.InstanceNorm2d(self.conv1.out_channels)
-        self.ins_norm2 = nn.InstanceNorm2d(self.conv2.out_channels)
-        self.ins_norm3 = nn.InstanceNorm2d(self.conv3.out_channels)
-        self.ins_norm4 = nn.InstanceNorm2d(self.conv4.out_channels)
-        self.ins_norm5 = nn.InstanceNorm2d(self.conv5.out_channels)
-
-    def conv_block(self, x, conv_layer, after_layers):
-        out = pad_layer(x, conv_layer, is_2d=True)
-        out = F.leaky_relu(out, negative_slope=self.ns)
-        for layer in after_layers:
-            out = layer(out)
-        return out
-
-    def forward(self, x, classify=False):
-        x = torch.unsqueeze(x, dim=1)
-        out = self.conv_block(x, self.conv1, [self.ins_norm1, self.drop1])
-        out = self.conv_block(out, self.conv2, [self.ins_norm2, self.drop2])
-        out = self.conv_block(out, self.conv3, [self.ins_norm3, self.drop3])
-        out = self.conv_block(out, self.conv4, [self.ins_norm4, self.drop4])
-        out = self.conv_block(out, self.conv5, [self.ins_norm5, self.drop5])
-        # GAN output value
-        val = pad_layer(out, self.conv6, is_2d=True)
-        val = val.view(val.size(0), -1)
-        mean_val = torch.mean(val, dim=1)
-        if classify:
-            # classify
-            logits = self.conv_classify(out)
-            print(logits.size())
-            logits = logits.view(logits.size(0), -1)
-            return (mean_val, logits)
-        else:
-            return mean_val
-
-
 class SpeakerClassifier(nn.Module):
+    "This model tells you who is speaking"
     def __init__(self, c_in=512, c_h=512, n_class=8, dp=0.1, ns=0.01):
         super().__init__()
         self.dp, self.ns = dp, ns
@@ -199,6 +156,7 @@ class SpeakerClassifier(nn.Module):
         self.ins_norm4 = nn.InstanceNorm1d(c_h)
 
     def conv_block(self, x, conv_layers, after_layers, res=True):
+        "Pass input to a convolution layer"
         out = x
         for layer in conv_layers:
             out = pad_layer(out, layer)
@@ -210,6 +168,7 @@ class SpeakerClassifier(nn.Module):
         return out
 
     def forward(self, x):
+        "Pass through"
         out = self.conv_block(
             x, [self.conv1, self.conv2], [self.ins_norm1, self.drop1], res=False
         )
@@ -225,62 +184,10 @@ class SpeakerClassifier(nn.Module):
         out = self.conv9(out)
         out = out.view(out.size()[0], -1)
         return out
-
-
-class LatentDiscriminator(nn.Module):
-    def __init__(self, c_in=1024, c_h=512, ns=0.2, dp=0.1):
-        super().__init__()
-        self.ns = ns
-        self.conv1 = nn.Conv1d(c_in, c_h, kernel_size=5)
-        self.conv2 = nn.Conv1d(c_h, c_h, kernel_size=5)
-        self.conv3 = nn.Conv1d(c_h, c_h, kernel_size=5)
-        self.conv4 = nn.Conv1d(c_h, c_h, kernel_size=5)
-        self.conv5 = nn.Conv1d(c_h, c_h, kernel_size=5)
-        self.conv6 = nn.Conv1d(c_h, c_h, kernel_size=5)
-        self.conv6 = nn.Conv1d(c_h, c_h, kernel_size=5)
-        self.conv7 = nn.Conv1d(c_h, c_h, kernel_size=5)
-        self.conv8 = nn.Conv1d(c_h, c_h, kernel_size=5)
-        self.conv9 = nn.Conv1d(c_h, 1, kernel_size=16)
-        self.drop1 = nn.Dropout(p=dp)
-        self.drop2 = nn.Dropout(p=dp)
-        self.drop3 = nn.Dropout(p=dp)
-        self.drop4 = nn.Dropout(p=dp)
-        self.ins_norm1 = nn.InstanceNorm1d(c_h)
-        self.ins_norm2 = nn.InstanceNorm1d(c_h)
-        self.ins_norm3 = nn.InstanceNorm1d(c_h)
-        self.ins_norm4 = nn.InstanceNorm1d(c_h)
-
-    def conv_block(self, x, conv_layers, after_layers, res=True):
-        out = x
-        for layer in conv_layers:
-            out = pad_layer(out, layer)
-            out = F.leaky_relu(out, negative_slope=self.ns)
-        for layer in after_layers:
-            out = layer(out)
-        if res:
-            out = out + x
-        return out
-
-    def forward(self, x):
-        out = self.conv_block(
-            x, [self.conv1, self.conv2], [self.ins_norm1, self.drop1], res=False
-        )
-        out = self.conv_block(
-            out, [self.conv3, self.conv4], [self.ins_norm2, self.drop2], res=True
-        )
-        out = self.conv_block(
-            out, [self.conv5, self.conv6], [self.ins_norm3, self.drop3], res=True
-        )
-        out = self.conv_block(
-            out, [self.conv7, self.conv8], [self.ins_norm4, self.drop4], res=True
-        )
-        out = self.conv9(out)
-        out = out.view(out.size()[0], -1)
-        mean_value = torch.mean(out, dim=1)
-        return mean_value
 
 
 class CBHG(nn.Module):
+    "CBHG network"
     def __init__(self, c_in=80, c_out=513):
         super().__init__()
         self.conv1s = nn.ModuleList(
@@ -302,6 +209,7 @@ class CBHG(nn.Module):
         self.linear2 = nn.Linear(256, c_out)
 
     def forward(self, x):
+        "Pass through"
         outs = []
         for l in self.conv1s:
             out = pad_layer(x, l)
@@ -331,6 +239,7 @@ class CBHG(nn.Module):
 
 
 class Decoder(nn.Module):
+    "Decoder of the original voice"
     def __init__(self, c_in=512, c_out=513, c_h=512, emb_size=128, ns=0.2):
         super().__init__()
         self.ns = ns
@@ -360,6 +269,7 @@ class Decoder(nn.Module):
         self.ins_norm5 = nn.InstanceNorm1d(c_h)
 
     def conv_block(self, x, conv_layers, norm_layer, emb, res=True):
+        "Pass through convolution layers"
         # first layer
         x_append = append_emb(emb, x.size(2), x)
         out = pad_layer(x_append, conv_layers[0])
@@ -376,6 +286,7 @@ class Decoder(nn.Module):
         return out
 
     def dense_block(self, x, emb, layers, norm_layer, res=True):
+        "Pass through dense layers"
         out = x
         for layer in layers:
             out = append_emb(emb, out.size(2), out)
@@ -387,6 +298,7 @@ class Decoder(nn.Module):
         return out
 
     def forward(self, x, c):
+        "Pass through"
         # emb = self.emb(c)
         (emb2, emb4, emb6, emb8, embd2, embd4, embrnn) = c
         # conv layer
@@ -419,6 +331,7 @@ class Decoder(nn.Module):
 
 
 class Encoder(nn.Module):
+    "Encode the input voice"
     def __init__(
         self, c_in=513, c_h1=128, c_h2=512, c_h3=128, ns=0.2, dp=0.3, emb_size=128
     ):
@@ -492,6 +405,7 @@ class Encoder(nn.Module):
         self.drop6 = nn.Dropout(p=dp)
 
     def conv_block(self, x, conv_layers, norm_layers, res=True):
+        "Pass through convolution layers"
         out = x
         for layer in conv_layers:
             out = pad_layer(out, layer)
@@ -505,6 +419,7 @@ class Encoder(nn.Module):
         return out
 
     def dense_block(self, x, layers, norm_layers, res=True):
+        "Pass through dense layers"
         out = x
         for layer in layers:
             out = linear(out, layer)
@@ -516,6 +431,7 @@ class Encoder(nn.Module):
         return out
 
     def forward(self, x):
+        "Pass through"
         outs = []
         for l in self.conv1s:
             out = pad_layer(x, l)
@@ -556,6 +472,7 @@ class Encoder(nn.Module):
 
 
 class Model(nn.Module):
+    "Encode then decode the input"
     def __init__(
         self,
         connection: str,
@@ -570,6 +487,7 @@ class Model(nn.Module):
         self.emb = nn.Parameter(torch.zeros(emb_size), requires_grad=True)
 
     def forward(self, x):
+        "Encode, then, Decode"
         (e, c) = self.enc(x)
 
         if self.connection == "normal":

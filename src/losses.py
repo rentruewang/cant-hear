@@ -1,4 +1,4 @@
-import functools as ft
+import functools
 
 import torch
 from numpy import random as np_random
@@ -8,7 +8,7 @@ from torch.nn import utils as nn_utils
 
 
 def apply(fn) -> object:
-    @ft.wraps(fn)
+    @functools.wraps(fn)
     def function(obj):
         return fn(obj)
 
@@ -17,32 +17,41 @@ def apply(fn) -> object:
 
 @apply(lambda cls: cls.apply)
 class GradReverse(autograd.Function):
+    "Reverse the gradient for upstream tensors"
+
     @staticmethod
-    def forward(ctx, x: torch.Tensor, lmbda: torch.Tensor = None) -> torch.Tensor:
-        if lmbda is None:
-            lmbda = x.new_ones(())
-        ctx.save_for_backward(lmbda)
-        return x * lmbda
+    def forward(ctx, x: torch.Tensor, lamb: torch.Tensor = None) -> torch.Tensor:
+        "Pass through"
+        if lamb is None:
+            lamb = x.new_ones(())
+        ctx.save_for_backward(lamb)
+        return x * lamb
 
     @staticmethod
     def backward(ctx, grad_x: torch.Tensor) -> torch.Tensor:
-        (lmbda,) = ctx.saved_tensors
-        return (-lmbda * grad_x, None)
+        "Reverse pass through"
+        (lamb,) = ctx.saved_tensors
+        return (-lamb * grad_x, None)
 
 
 @apply(lambda cls: cls.apply)
 class NoGrad(autograd.Function):
+    "Remove the gradient by detaching the graph"
+
     @staticmethod
     def forward(ctx, x: torch.Tensor) -> torch.Tensor:
+        "Pass through"
         return x
 
     @staticmethod
-    def backward(ctx, *grad_outputs: tuple):
+    def backward(ctx, *_: tuple):
+        "Reverse pass through"
         return None
 
 
 @autograd.no_grad()
 def signal_noise_ratio(clean: torch.Tensor, output: torch.Tensor) -> tuple:
+    "Signal to noise ratio"
     noise = output - clean
     power_clean = (clean ** 2).sum()
     power_noise = (noise ** 2).sum()
@@ -56,6 +65,7 @@ def reconstruct(
     train: bool,
     max_norm: float,
 ) -> tuple:
+    "Reconstruct the original sound"
     return supervised(
         model=model,
         data=(data, data),
@@ -73,6 +83,8 @@ def flow(
     train: bool,
     max_norm: float,
 ) -> tuple:
+    "Perform the entire flow"
+
     assert train or not max_norm
     (model, optimizer) = model
 
@@ -96,6 +108,8 @@ def flow(
 
 
 def random_timeshift(tensor: torch.Tensor) -> torch.Tensor:
+    "Random timeshift on tensor"
+
     # delay or advance
     size = tensor.size(-1)
     start = np_random.randint(low=-size, high=size, size=[])
@@ -106,14 +120,18 @@ def random_timeshift(tensor: torch.Tensor) -> torch.Tensor:
 
 
 def random_scale(tensor: torch.Tensor, scale: float) -> torch.Tensor:
+    "Creates a tensor of random scale"
+
     r = np_random.uniform(low=-1, high=1)
     factor = scale ** r
     return tensor * factor
 
 
-def measure(
+def artifact(
     processed: torch.Tensor, original: torch.Tensor, dropout: float, scale: float
 ) -> torch.Tensor:
+    "Creates artificial noise"
+
     noise = original - processed
     noise = F.dropout(noise, dropout)
     noise = random_timeshift(noise)
@@ -132,6 +150,8 @@ def ambient(
     train: bool,
     max_norm: float,
 ) -> tuple:
+    "Ambient loss for wasserstein GAN"
+
     assert train or not max_norm
     (model, model_optim) = model
     (amb, amb_optim) = amb
@@ -140,7 +160,7 @@ def ambient(
 
     for _ in range(wgan_ratio):
         out = amb(dirty)
-        out = grad_reverse(out)
+        out = GradReverse(out)
         out = out.mean()
 
         grads = autograd.grad(
@@ -163,8 +183,8 @@ def ambient(
     for module in model:
         x = module(x)
 
-    x = grad_reverse(x)
-    _x = measure(x, _inp, dropout, scale)
+    x = GradReverse(x)
+    _x = artifact(x, _inp, dropout, scale)
     out = amb(_x)
     out = out.mean()
 
@@ -188,6 +208,7 @@ def ambient(
 def supervised(
     model: tuple, data: tuple, recon_loss: nn.Module, train: bool, max_norm: float
 ) -> tuple:
+    "Supervised training"
     assert train or not max_norm
     (model, model_optim) = model
     (clean, dirty) = data
@@ -207,6 +228,8 @@ def supervised(
 
 
 class ReconstructionLoss(nn.Module):
+    "How good is the reconstruct"
+
     def __init__(self, mode: str = "l1", reduction: str = "mean"):
         super().__init__()
         mode = mode.strip().lower()
@@ -217,13 +240,17 @@ class ReconstructionLoss(nn.Module):
         }[mode]
 
     def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        "Pass through"
         return self.loss(input=input, target=target)
 
 
 class ConcatLoss(nn.Module):
+    "Perform loss on concated tensors"
+
     def __init__(self, *losses: tuple):
         super().__init__()
         self.losses = losses
 
     def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        "Pass through"
         return sum(loss(input=input, target=target) for loss in self.losses)

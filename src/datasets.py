@@ -7,10 +7,12 @@ from torch.utils.data import Dataset
 
 
 def _dump_too_short(array: np.ndarray, target_len: int, dim: int = -1) -> np.ndarray:
+    "Remove the input that is too short"
     return (array.shape[dim] > target_len) and array
 
 
 def _select_slice(array: np.ndarray, max_len: int, dim: int = -1) -> np.ndarray:
+    "Choose only a fixed length of the voice."
     randint = np_random.randint(low=0, high=array.shape[dim] - max_len)
     return np.stack(
         tuple(
@@ -22,17 +24,23 @@ def _select_slice(array: np.ndarray, max_len: int, dim: int = -1) -> np.ndarray:
 
 
 class MapWrapper(object):
+    "Creates a pseudo-map"
+
     def __init__(self, *args, **kwargs):
         object.__init__(self, *args, **kwargs)
 
     def map(self, func, iterable):
+        "Does nothing"
         return [func(i) for i in iterable]
 
     def starmap(self, func, iterable):
+        "Does nothing"
         return [func(*i) for i in iterable]
 
 
 class PairedDataset(Dataset):
+    "Pair the clean data with dirty data"
+
     def __init__(
         self,
         filepath: str,
@@ -86,6 +94,8 @@ class PairedDataset(Dataset):
 
 
 class LogWrap(Dataset):
+    "log(data)"
+
     def __init__(self, raw_data, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.raw_data = raw_data
@@ -99,6 +109,8 @@ class LogWrap(Dataset):
 
 
 class LogDataset(Dataset):
+    "Pair data to log(data)"
+
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.raw = PairedDataset(*args, **kwargs)

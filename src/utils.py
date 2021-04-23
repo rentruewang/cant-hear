@@ -23,6 +23,8 @@ def progbar(iterable, total: int, message: str) -> tqdm:
 
 
 def terminate_on_nan(_: nn.Module, grad_input: tuple, grad_output: tuple) -> bool:
+    "Terminates the training process if NaN is found."
+
     nan_in = ((g is None or torch.isnan(g)) for g in grad_input)
     nan_out = ((g is None or torch.isnan(g)) for g in grad_output)
     if any(nan_in) or any(nan_out):
@@ -31,12 +33,15 @@ def terminate_on_nan(_: nn.Module, grad_input: tuple, grad_output: tuple) -> boo
 
 
 def name(path: str, fname: str, *args: tuple) -> str:
+    "Generate the name for a file"
     return os_path.join(path, "_".join(fname.replace(".", "/").split("/") + list(args)))
 
 
 def read_wav(
     fname: str, sr: int, norm: float = 0, pre_emphasis: bool = False
 ) -> np.ndarray:
+    "Read a wave file into a normalized array"
+
     (S, _) = librosa.load(fname, sr=sr)
     (S, _) = effects.trim(S)
     if pre_emphasis:
@@ -49,6 +54,8 @@ def read_wav(
 def stft(
     S: np.ndarray, n_fft: int, hop_length: int, win_length: int, window: str, norm: int
 ) -> np.ndarray:
+    "Short time Fourier transform"
+
     S_hat = librosa.stft(
         y=S, n_fft=n_fft, hop_length=hop_length, win_length=win_length, window=window
     )
@@ -65,6 +72,8 @@ def melspectrogram(
     window: str,
     power: int,
 ):
+    "mel spectrogram of the original sequence"
+
     return librosa_feature.melspectrogram(
         y=arr,
         sr=sr,
@@ -77,28 +86,40 @@ def melspectrogram(
 
 
 def power(seq: np.ndarray) -> np.ndarray:
+    "Power of the original voice sequence"
+
     return (seq ** 2).sum()
 
 
 def rescale(input: np.ndarray, target: np.ndarray, ratio: float) -> np.ndarray:
+    "Rescale the input"
+
     return input * np.sqrt((power(target) / power(input + 1e-8)) / ratio)
 
 
 def bernoulli(length: int, prob: float) -> np.ndarray:
+    "Bernoulli distribution"
+
     rand = np_random.uniform(low=0, high=1, size=[length])
     return (rand < prob).astype("int")
 
 
 def softmax(x: np.ndarray, dim: int) -> np.ndarray:
+    "Perform softmax"
+
     exp = np.exp(x)
     return exp / exp.sum(axis=dim)
 
 
 def select_indices(length: int, prob: float) -> np.ndarray:
+    "Select several random indices"
+
     return np.argwhere(bernoulli(length, prob)).squeeze(-1)
 
 
 def crop1d(array: np.ndarray, length: int) -> np.ndarray:
+    "Cut the input into desired shape"
+
     assert array.ndim == 1
     if len(array) > length:
         index = np_random.randint(low=0, high=len(array) - length, size=None)
@@ -108,12 +129,16 @@ def crop1d(array: np.ndarray, length: int) -> np.ndarray:
 
 
 def pad1d(array: np.ndarray, pads: tuple) -> np.ndarray:
+    "Pad the input"
+
     assert len(pads) == 2
     (l, r) = pads
     return np.concatenate((np.zeros([l]), array, np.zeros([r])))
 
 
 def mixing1d(arrays, indices, weights, target_length):
+    "Mix different voices together"
+
     zeros = np.zeros(shape=[target_length])
     for (arr, ind, w) in zip(arrays, indices, weights):
         zeros += w * pad1d(arr, (ind, target_length - len(arr) - ind))
@@ -123,6 +148,8 @@ def mixing1d(arrays, indices, weights, target_length):
 def generate_noises(
     noises: np.ndarray, indices: np.ndarray, target_length: int, T: float
 ) -> np.ndarray:
+    "Generate fake noises"
+
     selected = tuple(noises[i] for i in indices)
     lengths = np.array(tuple(len(t) for t in selected))
     starting_indices = np_random.randint(low=0, high=target_length, size=len(indices))
@@ -135,9 +162,13 @@ def generate_noises(
 
 
 def unfold_dict(dictionary: dict) -> dict:
+    "Flatten a dictionary"
+
     lst = []
 
     def unfold_dict_recursive(dictionary, prefix=""):
+        "Flatten a dictionary recursively"
+
         for (key, elem) in dictionary.items():
             assert isinstance(key, str)
             name = "/".join((prefix, key))
@@ -153,22 +184,30 @@ def unfold_dict(dictionary: dict) -> dict:
 
 
 def length(iterable):
+    "Flatten an interable and count its length"
+
     i = 0
 
-    def length(iterable):
+    def length_recursive(iterable):
+        "Count the length of an iterable recursively"
+
         if isinstance(iterable, (list, tuple)):
             for t in iterable:
-                length(t)
+                length_recursive(t)
         else:
             nonlocal i
             i += 1
 
-    length(iterable)
+    length_recursive(iterable)
     return i
 
 
 def remove_folder(folder: str):
+    "Remove a folder"
+
     def remove_recursive(folder):
+        "Remove a folder recursively"
+
         files = os.listdir(folder)
         for f in files:
             if os_path.isfile(f):
@@ -180,40 +219,3 @@ def remove_folder(folder: str):
                 raise ValueError
 
     remove_recursive(folder=folder)
-
-
-class Dummy:
-    def __dummy(self, *_):
-        pass
-
-    def __getattribute__(self, _: str):
-        return object.__getattribute__(self, "_DummyWriter__dummy")
-
-
-class ScalarRecorder:
-    def __init__(self, summary: str = ""):
-        self.summary = summary
-        self.data = defaultdict(list)
-        self.tag_count = defaultdict(lambda: itertools.count(start=1, step=1))
-
-    def __call__(self, tag: str, value: dict):
-        for (key, val) in value.items():
-            this_tag = f"{tag}/{key}"
-            self.data[this_tag].append(val)
-
-    def __del__(self):
-        try:
-            json.dump(
-                obj=self.data,
-                fp=open(file=os_path.join(self.summary, "history.json"), mode="w+"),
-                indent=4,
-            )
-            for (tag, history) in self.data.items():
-                plt.clf()
-                plt.scatter(x=range(1, 1 + len(history)), y=history)
-                name = "_".join(tag.split("/"))
-                plt.savefig(fname=os_path.join(self.summary, f"{name}.png"))
-
-        except TypeError:
-            # summary type is ""
-            print("results not saved")
