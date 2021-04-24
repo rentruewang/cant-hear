@@ -1,25 +1,30 @@
+"""
+Utility functions thats reusable
+"""
+
 import functools
 import os
+from collections import defaultdict
 from os import path as os_path
 
 import librosa
 import numpy as np
 import torch
-from librosa import effects
-from librosa import feature as librosa_feature
+from librosa import effects, feature
 from librosa import util as librosa_util
 from numpy import random as np_random
-from torch import nn
+from torch.nn import Module
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 
 @functools.wraps(tqdm)
-def progbar(iterable, total: int, message: str) -> tqdm:
+def progbar(iterable, total: int = None, message: str = "") -> tqdm:
     print(message)
     return tqdm(iterable=iterable, total=total)
 
 
-def terminate_on_nan(_: nn.Module, grad_input: tuple, grad_output: tuple) -> bool:
+def terminate_on_nan(_: Module, grad_input: tuple, grad_output: tuple) -> bool:
     "Terminates the training process if NaN is found."
 
     nan_in = ((g is None or torch.isnan(g)) for g in grad_input)
@@ -71,7 +76,7 @@ def melspectrogram(
 ):
     "mel spectrogram of the original sequence"
 
-    return librosa_feature.melspectrogram(
+    return feature.melspectrogram(
         y=arr,
         sr=sr,
         n_fft=n_fft,
@@ -88,10 +93,10 @@ def power(seq: np.ndarray) -> np.ndarray:
     return (seq ** 2).sum()
 
 
-def rescale(input: np.ndarray, target: np.ndarray, ratio: float) -> np.ndarray:
+def rescale(inp: np.ndarray, target: np.ndarray, ratio: float) -> np.ndarray:
     "Rescale the input"
 
-    return input * np.sqrt((power(target) / power(input + 1e-8)) / ratio)
+    return inp * np.sqrt((power(target) / power(inp + 1e-8)) / ratio)
 
 
 def bernoulli(length: int, prob: float) -> np.ndarray:
@@ -121,8 +126,7 @@ def crop1d(array: np.ndarray, length: int) -> np.ndarray:
     if len(array) > length:
         index = np_random.randint(low=0, high=len(array) - length, size=None)
         return array[index : index + length]
-    else:
-        return array
+    return array
 
 
 def pad1d(array: np.ndarray, pads: tuple) -> np.ndarray:
@@ -216,3 +220,32 @@ def remove_folder(folder: str):
                 raise ValueError
 
     remove_recursive(folder=folder)
+
+
+class ScalarRecorder(SummaryWriter):
+    "This is a convenience class so that we don't need to explicit track iteration"
+
+    def __init__(self, summary: str):
+        super().__init__(log_dir=summary)
+        self.steps = defaultdict(int)
+
+    def __call__(self, tag: str, value: float):
+        self.steps[tag] += 1
+        super().add_scalar(tag, value, global_step=self.steps[tag])
+
+
+class MapWrapper:
+    "Creates a pseudo-map"
+
+    def __init__(self, *args, **kwargs):
+        object.__init__(self, *args, **kwargs)
+
+    @staticmethod
+    def map(func, iterable):
+        "Map, but sequential."
+        return [func(i) for i in iterable]
+
+    @staticmethod
+    def starmap(func, iterable):
+        "Map, but sequential."
+        return [func(*i) for i in iterable]

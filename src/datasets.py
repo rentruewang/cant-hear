@@ -1,9 +1,15 @@
+"""
+This module provides several datasets that are compatible with torch
+to be used in torch's `DataLoader`s.
+"""
 import glob
 from multiprocessing.pool import ThreadPool
 
 import numpy as np
 from numpy import random as np_random
 from torch.utils.data import Dataset
+
+from .utils import MapWrapper
 
 
 def _dump_too_short(array: np.ndarray, target_len: int, dim: int = -1) -> np.ndarray:
@@ -21,21 +27,6 @@ def _select_slice(array: np.ndarray, max_len: int, dim: int = -1) -> np.ndarray:
         ),
         axis=dim,
     )
-
-
-class MapWrapper(object):
-    "Creates a pseudo-map"
-
-    def __init__(self, *args, **kwargs):
-        object.__init__(self, *args, **kwargs)
-
-    def map(self, func, iterable):
-        "Does nothing"
-        return [func(i) for i in iterable]
-
-    def starmap(self, func, iterable):
-        "Does nothing"
-        return [func(*i) for i in iterable]
 
 
 class PairedDataset(Dataset):

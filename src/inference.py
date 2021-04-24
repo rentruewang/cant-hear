@@ -1,3 +1,7 @@
+"""
+This module is used when you want to evaluate the model you trained.
+"""
+
 import functools
 import glob
 import json
@@ -7,7 +11,7 @@ import types
 from argparse import ArgumentParser
 from multiprocessing.pool import Pool
 from os import path as os_path
-from typing import Sequence
+from typing import Sequence, Union
 
 import librosa
 import numpy as np
@@ -15,14 +19,15 @@ import seaborn as sns
 import torch
 from matplotlib import pyplot as plt
 from scipy.io import wavfile
-from torch import cuda, nn
+from torch import cuda
+from torch.nn import Module, ModuleList
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 
-from . import present
+from . import present, utils
 from .autoencoder import Model
 from .datasets import PairedDataset
+from .utils import MapWrapper
 
 
 def _snr(reference: np.ndarray, tensor: np.ndarray) -> float:
@@ -33,13 +38,13 @@ def _snr(reference: np.ndarray, tensor: np.ndarray) -> float:
     return ref_pow / noise_pow
 
 
-def _prepare_model(model_config: dict, device: str) -> nn.Module:
+def _prepare_model(model_config: dict, device: str) -> Module:
     "Load model from disk according to config"
     state_dict = model_config["state"]
     len_model = model_config["len"]
     connection = model_config["connection"]
 
-    model = nn.ModuleList(Model(connection=connection) for _ in range(len_model))
+    model = ModuleList(Model(connection=connection) for _ in range(len_model))
     model.load_state_dict(state_dict, strict=False)
 
     model.to(device)
@@ -73,8 +78,7 @@ def to_numpy(tensor_list):
     "Convert a torch tensor to an numpy array"
     if isinstance(tensor_list, torch.Tensor):
         return tensor_list.cpu().detach().numpy()
-    else:
-        return tuple(to_numpy(elem) for elem in tensor_list)
+    return tuple(to_numpy(elem) for elem in tensor_list)
 
 
 def inference(
@@ -134,7 +138,7 @@ def inference(
         for (r, entry) in zip(reference, out_list)
     )
     json.dump(
-        obj={n: v for (n, v) in zip(out_tags, snr_list)},
+        obj=dict(zip(out_tags, snr_list)),
         fp=open(os_path.join(target_dir, "snr.json"), mode="w+"),
         indent=4,
     )
@@ -145,7 +149,7 @@ def inference(
         for (r, entry) in zip(reference, out_list)
     )
     json.dump(
-        obj={n: v for (n, v) in zip(out_tags, l1_list)},
+        obj=dict(zip(out_tags, l1_list)),
         fp=open(os_path.join(target_dir, "l1.json"), mode="w+"),
         indent=4,
     )
@@ -156,14 +160,14 @@ def inference(
         for (r, entry) in zip(reference, out_list)
     )
     json.dump(
-        obj={n: v for (n, v) in zip(out_tags, l2_list)},
+        obj=dict(zip(out_tags, l2_list)),
         fp=open(os_path.join(target_dir, "l2.json"), mode="w+"),
         indent=4,
     )
 
     # waveform metrics
     if len(waveform_metrics) != 0:
-        pool = None if processes == 1 else Pool(processes=processes)
+        pool = Pool(processes=processes) if processes != 1 else MapWrapper()
         logger.info("transforming to waveform")
         wave_list = (tuple(griffinlim(o, pool) for o in out) for out in out_list)
         wave_ref = (griffinlim(r, pool) for r in reference)
@@ -175,12 +179,10 @@ def inference(
                 for (r, entry) in zip(wave_ref, wave_list)
             )
             json.dump(
-                obj={n: v for (n, v) in zip(out_tags, value_list)},
+                obj=dict(zip(out_tags, value_list)),
                 fp=open(os_path.join(target_dir, f"{metric}.json"), mode="w+"),
                 indent=4,
             )
-        if pool is not None:
-            pool.close()
 
     if metric_only:
         return
@@ -192,7 +194,7 @@ def inference(
     os.makedirs(name=voc_dir, exist_ok=True)
 
     print("saving spectrograms and waves")
-    pool = None if processes == 1 else Pool(processes=processes)
+    pool = Pool(processes=processes) if processes != 1 else MapWrapper()
 
     # Convert data into an iterator
     data_iter = zip(
@@ -206,9 +208,10 @@ def inference(
         zip(*dirty_test_out),
     )
 
-    for (i, packed_data) in tqdm(
-        enumerate(data_iter),
+    for (i, packed_data) in utils.progbar(
+        iterable=enumerate(data_iter),
         total=len(clean_train),
+        message="Save spectrogram to wav files",
     ):
 
         (
@@ -242,30 +245,21 @@ def inference(
             d_test,
             d_test_o,
         )
-        if pool is not None:
-            pool.starmap(
-                func=spec_wav,
-                iterable=(
-                    (s, n, configs, (vis_dir, voc_dir))
-                    for (s, n) in zip(save_list, name_list)
-                ),
-            )
-        else:
-            for (s, n) in zip(save_list, name_list):
-                spec_wav(s, n, configs, (vis_dir, voc_dir))
-    if pool is not None:
-        pool.close()
-    del pool
+        pool.starmap(
+            func=spec_wav,
+            iterable=(
+                (s, n, configs, (vis_dir, voc_dir))
+                for (s, n) in zip(save_list, name_list)
+            ),
+        )
 
 
 def clear_relative(path: str) -> str:
     "Remove './' pattern"
-    index = 0
-    while index < len(path) and path[index] == ".":
-        index += 1
-        while index < len(path) and path[index] == "/":
-            index += 1
-    return path[index:]
+    if path.startswith("./"):
+        path = path.lstrip("./")
+    path.replace("/./", "/")
+    return path
 
 
 if __name__ == "__main__":
@@ -338,7 +332,7 @@ if __name__ == "__main__":
     logger = logging.getLogger()
 
     @functools.wraps(librosa.griffinlim)
-    def griffinlim(S: np.ndarray, pool: Pool = None) -> np.ndarray:
+    def griffinlim(S: np.ndarray, pool: Union[Pool, MapWrapper]) -> np.ndarray:
         if S.ndim == 2:
             return librosa.griffinlim(
                 S=S,
@@ -347,26 +341,12 @@ if __name__ == "__main__":
                 win_length=win_length,
                 window=window,
             )
-        elif S.ndim == 3:
-            if pool is not None:
-                return np.stack(
-                    pool.starmap(
-                        func=librosa.griffinlim,
-                        iterable=(
-                            (_S, n_iter, hop_length, win_length, window) for _S in S
-                        ),
-                    )
-                )
-
+        if S.ndim == 3:
             return np.stack(
-                librosa.griffinlim(
-                    S=_S,
-                    n_iter=n_iter,
-                    hop_length=hop_length,
-                    win_length=win_length,
-                    window=window,
+                pool.starmap(
+                    func=librosa.griffinlim,
+                    iterable=((_S, n_iter, hop_length, win_length, window) for _S in S),
                 )
-                for _S in S
             )
 
         raise ValueError("Unreachable")

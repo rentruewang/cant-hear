@@ -1,36 +1,45 @@
+"""
+Use this module to train a model.
+"""
+
 import json
 import os
 from argparse import ArgumentParser
 from collections import defaultdict
 from os import path as os_path
+from typing import NamedTuple
 
 import torch
-from torch import autograd, cuda, nn, optim
+from torch import cuda, no_grad
+from torch.nn import Module, ModuleList
+from torch.optim import Adam, Optimizer
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 
-from . import init, losses
+from . import init, losses, utils
 from .autoencoder import Model, PatchDiscriminator
 from .datasets import PairedDataset
 from .losses import ReconstructionLoss
 from .utils import ScalarRecorder
 
 
-def get_model(connection: str, **configs: dict) -> nn.Module:
+def get_model(connection: str, **configs: dict) -> Module:
     "Create the model from configs"
     num_models = configs["num_models"]
-    return nn.ModuleList(Model(connection) for _ in range(num_models))
+    return ModuleList(Model(connection) for _ in range(num_models))
+
+
+ModelOptim = NamedTuple("ModelOptim", [("model", Module), ("optim", Optimizer)])
 
 
 def train(
     epochs: int,
     loaders: tuple,
-    model_info: tuple,
-    amb_info: tuple,
+    model_info: ModelOptim,
+    amb_info: ModelOptim,
     wgan_info: tuple,
     measure_info: tuple,
     cycle: bool,
-    recon_loss: nn.Module,
+    recon_loss: Module,
     device: str,
     max_norm: float,
     summary: str,
@@ -40,8 +49,12 @@ def train(
     "Training the model"
     (do_flow, do_recon, do_ambient, do_supv) = flags
     (train_loader, test_loader) = loaders
-    (model, model_optim) = model_info
-    (amb, amb_optim) = amb_info
+
+    model = model_info.model
+    model_optim = model_info.optim
+    amb = amb_info.model
+    amb_optim = amb_info.optim
+
     (wgan_ratio, grad_penalty) = wgan_info
 
     try:
@@ -52,31 +65,88 @@ def train(
     os.makedirs(name=summary, exist_ok=True)
     recorder = ScalarRecorder(summary=summary)
 
-    try:
-        for epo in range(1, 1 + epochs):
-            mean_V = defaultdict(list)
-            mean_G = defaultdict(list)
-            mean_R = defaultdict(list)
-            mean_S = defaultdict(list)
-            mean_N = defaultdict(list)
-            mean_D = defaultdict(list)
-            mean_F = defaultdict(list)
-            ratio = defaultdict(list)
+    for epo in range(1, 1 + epochs):
+        mean_V = defaultdict(list)
+        mean_G = defaultdict(list)
+        mean_R = defaultdict(list)
+        mean_S = defaultdict(list)
+        mean_N = defaultdict(list)
+        mean_D = defaultdict(list)
+        mean_F = defaultdict(list)
+        ratio = defaultdict(list)
 
-            print(f"Epoch {epo:04d}/{epochs:04d}, training.")
-            for (clean, dirty) in tqdm(train_loader):
+        for (clean, dirty) in utils.progbar(
+            iterable=train_loader, message=f"Epoch {epo:04d}/{epochs:04d}, training."
+        ):
+            (clean, dirty) = (clean.to(device), dirty.to(device))
+            model.train()
+            if do_flow:
+                (F_loss, out) = losses.flow(
+                    model=(model, model_optim),
+                    data=dirty,
+                    recon_loss=recon_loss,
+                    cycle=cycle,
+                    train=True,
+                    max_norm=max_norm,
+                )
+                mean_F["train"].append(F_loss.item())
+
+            if do_ambient:
+                ((value, grad_norm), out) = losses.ambient(
+                    model=(model, model_optim),
+                    amb=(amb, amb_optim),
+                    data=(clean, dirty),
+                    wgan_ratio=wgan_ratio,
+                    measure_info=measure_info,
+                    penalty=grad_penalty,
+                    train=True,
+                    max_norm=max_norm,
+                )
+                mean_V["train"].append(value.item())
+                mean_G["train"].append(grad_norm.item())
+
+            if do_recon:
+                (R_loss, out) = losses.reconstruct(
+                    model=(model, model_optim),
+                    data=clean,
+                    recon_loss=recon_loss,
+                    train=True,
+                    max_norm=max_norm,
+                )
+                mean_R["train"].append(R_loss.item())
+
+            if do_supv:
+                (loss, out) = losses.supervised(
+                    model=(model, model_optim),
+                    data=(clean, dirty),
+                    recon_loss=recon_loss,
+                    train=True,
+                    max_norm=max_norm,
+                )
+                mean_D["train"].append(loss.item())
+
+            (s_power, n_power) = losses.signal_noise_ratio(clean, out)
+
+            mean_S["train"].append(s_power.item())
+            mean_N["train"].append(n_power.item())
+
+        with no_grad():
+            for (clean, dirty) in utils.progbar(
+                iterable=test_loader, message=f"Epoch {epo:04d}/{epochs:04d}, testing."
+            ):
                 (clean, dirty) = (clean.to(device), dirty.to(device))
-                model.train()
+                model.eval()
+
                 if do_flow:
                     (F_loss, out) = losses.flow(
                         model=(model, model_optim),
                         data=dirty,
                         recon_loss=recon_loss,
                         cycle=cycle,
-                        train=True,
-                        max_norm=max_norm,
+                        train=False,
+                        max_norm=None,
                     )
-                    mean_F["train"].append(F_loss.item())
+                    mean_F["test"].append(F_loss.item())
 
                 if do_ambient:
                     ((value, grad_norm), out) = losses.ambient(
@@ -86,139 +156,81 @@ def train(
                         wgan_ratio=wgan_ratio,
                         measure_info=measure_info,
                         penalty=grad_penalty,
-                        train=True,
-                        max_norm=max_norm,
+                        train=False,
+                        max_norm=None,
                     )
-                    mean_V["train"].append(value.item())
-                    mean_G["train"].append(grad_norm.item())
+
+                    mean_V["test"].append(value.item())
+                    mean_G["test"].append(grad_norm.item())
 
                 if do_recon:
                     (R_loss, out) = losses.reconstruct(
                         model=(model, model_optim),
                         data=clean,
                         recon_loss=recon_loss,
-                        train=True,
-                        max_norm=max_norm,
+                        train=False,
+                        max_norm=None,
                     )
-                    mean_R["train"].append(R_loss.item())
+                    mean_R["test"].append(R_loss.item())
 
                 if do_supv:
                     (loss, out) = losses.supervised(
                         model=(model, model_optim),
                         data=(clean, dirty),
                         recon_loss=recon_loss,
-                        train=True,
-                        max_norm=max_norm,
+                        train=False,
+                        max_norm=None,
                     )
-                    mean_D["train"].append(loss.item())
+                    mean_D["test"].append(loss.item())
 
                 (s_power, n_power) = losses.signal_noise_ratio(clean, out)
+                mean_S["test"].append(s_power.item())
+                mean_N["test"].append(n_power.item())
 
-                mean_S["train"].append(s_power.item())
-                mean_N["train"].append(n_power.item())
+        if do_flow:
+            for key in mean_F.keys():
+                value = mean_F[key]
+                mean_F[key] = sum(value) / len(value)
+            recorder(tag="flow", value=mean_F)
 
-            with autograd.no_grad():
-                print(f"Epoch {epo:04d}/{epochs:04d}, testing.")
-                for (clean, dirty) in tqdm(test_loader):
-                    (clean, dirty) = (clean.to(device), dirty.to(device))
-                    model.eval()
+        if do_amb:
+            for key in mean_V.keys():
+                value = mean_V[key]
+                mean_V[key] = sum(value) / len(value)
+            recorder(tag="ambient", value=mean_V)
+            for key in mean_G.keys():
+                value = mean_G[key]
+                mean_G[key] = sum(value) / len(value)
+            recorder(tag="gradnorm", value=mean_G)
 
-                    if do_flow:
-                        (F_loss, out) = losses.flow(
-                            model=(model, model_optim),
-                            data=dirty,
-                            recon_loss=recon_loss,
-                            cycle=cycle,
-                            train=False,
-                            max_norm=None,
-                        )
-                        mean_F["test"].append(F_loss.item())
+        if do_recon:
+            for key in mean_R.keys():
+                value = mean_R[key]
+                mean_R[key] = sum(value) / len(value)
+            recorder(tag="recon_loss", value=mean_R)
 
-                    if do_ambient:
-                        ((value, grad_norm), out) = losses.ambient(
-                            model=(model, model_optim),
-                            amb=(amb, amb_optim),
-                            data=(clean, dirty),
-                            wgan_ratio=wgan_ratio,
-                            measure_info=measure_info,
-                            penalty=grad_penalty,
-                            train=False,
-                            max_norm=None,
-                        )
+        if do_supv:
+            for key in mean_D.keys():
+                value = mean_D[key]
+                mean_D[key] = sum(value) / len(value)
+            recorder(tag="supv_loss", value=mean_D)
 
-                        mean_V["test"].append(value.item())
-                        mean_G["test"].append(grad_norm.item())
+        for (key_S, key_N) in zip(mean_S.keys(), mean_N.keys()):
+            key = key_N
+            assert key == key_S
+            (val_N, val_S) = (mean_N[key], mean_S[key])
+            ratio[key] = (sum(val_S) / len(val_S)) / (sum(val_N) / len(val_N))
+        recorder(tag="ratio", value=ratio)
 
-                    if do_recon:
-                        (R_loss, out) = losses.reconstruct(
-                            model=(model, model_optim),
-                            data=clean,
-                            recon_loss=recon_loss,
-                            train=False,
-                            max_norm=None,
-                        )
-                        mean_R["test"].append(R_loss.item())
-
-                    if do_supv:
-                        (loss, out) = losses.supervised(
-                            model=(model, model_optim),
-                            data=(clean, dirty),
-                            recon_loss=recon_loss,
-                            train=False,
-                            max_norm=None,
-                        )
-                        mean_D["test"].append(loss.item())
-
-                    (s_power, n_power) = losses.signal_noise_ratio(clean, out)
-                    mean_S["test"].append(s_power.item())
-                    mean_N["test"].append(n_power.item())
-
-            if do_flow:
-                for key in mean_F.keys():
-                    value = mean_F[key]
-                    mean_F[key] = sum(value) / len(value)
-                recorder(tag="flow", value=mean_F)
-
-            if do_amb:
-                for key in mean_V.keys():
-                    value = mean_V[key]
-                    mean_V[key] = sum(value) / len(value)
-                recorder(tag="ambient", value=mean_V)
-                for key in mean_G.keys():
-                    value = mean_G[key]
-                    mean_G[key] = sum(value) / len(value)
-                recorder(tag="gradnorm", value=mean_G)
-
-            if do_recon:
-                for key in mean_R.keys():
-                    value = mean_R[key]
-                    mean_R[key] = sum(value) / len(value)
-                recorder(tag="recon_loss", value=mean_R)
-
-            if do_supv:
-                for key in mean_D.keys():
-                    value = mean_D[key]
-                    mean_D[key] = sum(value) / len(value)
-                recorder(tag="supv_loss", value=mean_D)
-
-            for (key_S, key_N) in zip(mean_S.keys(), mean_N.keys()):
-                key = key_N
-                assert key == key_S
-                (val_N, val_S) = (mean_N[key], mean_S[key])
-                ratio[key] = (sum(val_S) / len(val_S)) / (sum(val_N) / len(val_N))
-            recorder(tag="ratio", value=ratio)
-
-            if epo % save_interval == 0:
-                torch.save(
-                    obj={
-                        "len": len_model,
-                        "connection": connection,
-                        "state": model.state_dict(),
-                    },
-                    f=os_path.join(summary, f"{epo:04d}.pt"),
-                )
-    finally:
-        del recorder
+        if epo % save_interval == 0:
+            torch.save(
+                obj={
+                    "len": len_model,
+                    "connection": connection,
+                    "state": model.state_dict(),
+                },
+                f=os_path.join(summary, f"{epo:04d}.pt"),
+            )
 
 
 if __name__ == "__main__":
@@ -300,14 +312,14 @@ if __name__ == "__main__":
     test_loader = DataLoader(dataset=testset, batch_size=batch_size, shuffle=False)
 
     model = get_model(connection=connection, num_models=num_models).to(device)
-    model_optim = optim.Adam(model.parameters(), lr=lr, betas=betas)
+    model_optim = Adam(model.parameters(), lr=lr, betas=betas)
     amb = PatchDiscriminator().to(device)
-    amb_optim = optim.Adam(model.parameters(), lr=lr, betas=betas)
+    amb_optim = Adam(model.parameters(), lr=lr, betas=betas)
     recon_loss = ReconstructionLoss()
     loaders = (train_loader, test_loader)
-    model_info = (model, model_optim)
-    amb_info = (amb, amb_optim)
-    wgan_info = (wgan_ratio, grad_penalty)
+    model_info = ModelOptim(model, model_optim)
+    amb_info = ModelOptim(amb, amb_optim)
+    wgan_info = ModelOptim(wgan_ratio, grad_penalty)
     measure_info = (dropout, scale)
 
     if do_init:

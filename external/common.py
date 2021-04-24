@@ -1,3 +1,7 @@
+"""
+Common code that is present in pesq and stoi
+"""
+
 import functools
 from multiprocessing.pool import Pool
 from typing import Callable
@@ -12,16 +16,14 @@ def evaluate(func: Callable) -> Callable:
     def evaluator(ref: ndarray, deg: ndarray, sr: int, pool: Pool = None) -> float:
         length = len(ref)
         assert length == len(deg)
-        if pool is not None:
-            # Multi processed
-            return (
-                sum(
-                    pool.starmap(
-                        func=func, iterable=((r, d, sr) for (r, d) in zip(ref, deg))
-                    )
+
+        return (
+            sum(
+                pool.starmap(
+                    func=func, iterable=((r, d, sr) for (r, d) in zip(ref, deg))
                 )
-                / length
             )
-        return sum(func(r, d, sr) for (r, d) in zip(ref, deg)) / length
+            / length
+        )
 
     return evaluator

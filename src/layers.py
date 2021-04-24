@@ -1,9 +1,22 @@
+"""
+This module provides some custom defined modules
+"""
+
 import torch
-from torch import nn
+from torch.nn import (
+    BatchNorm1d,
+    Conv1d,
+    GRUCell,
+    InstanceNorm1d,
+    LeakyReLU,
+    Linear,
+    Module,
+    Sequential,
+)
 from torch.nn import functional as F
 
 
-class Squeeze(nn.Module):
+class Squeeze(Module):
     "Performs squeezing on the tensor"
 
     def __init__(self, dim):
@@ -15,15 +28,15 @@ class Squeeze(nn.Module):
         return x.squeeze(dim=self.dim)
 
 
-class HighWay(nn.Module):
+class HighWay(Module):
     "Highway network"
 
     def __init__(self, features, ns):
         super().__init__()
-        self.T = nn.Linear(in_features=features, out_features=features)
-        self.H = nn.Linear(in_features=features, out_features=features)
-        self.leaky_relu = nn.LeakyReLU(negative_slope=ns)
-        self.norm = nn.InstanceNorm1d(num_features=features)
+        self.T = Linear(in_features=features, out_features=features)
+        self.H = Linear(in_features=features, out_features=features)
+        self.leaky_relu = LeakyReLU(negative_slope=ns)
+        self.norm = InstanceNorm1d(num_features=features)
 
     def forward(self, x):
         "Pass through"
@@ -32,7 +45,7 @@ class HighWay(nn.Module):
         return self.norm(T * H + (1 - T) * x)
 
 
-class Conv1dNorm(nn.Sequential):
+class Conv1dNorm(Sequential):
     "Convolution1d and Norm"
 
     def __init__(
@@ -42,12 +55,12 @@ class Conv1dNorm(nn.Sequential):
         kernel_size,
         stride,
         padding,
-        activation=None,
         *args,
+        activation=None,
         **kwargs
     ):
         super().__init__()
-        self.conv = nn.Conv1d(
+        self.conv = Conv1d(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=kernel_size,
@@ -56,18 +69,18 @@ class Conv1dNorm(nn.Sequential):
             *args,
             **kwargs
         )
-        self.norm = nn.BatchNorm1d(num_features=out_channels)
+        self.norm = BatchNorm1d(num_features=out_channels)
         if activation:
             self.activation = activation
 
 
-class TanhAttention(nn.Module):
+class TanhAttention(Module):
     "Attention using tanh"
 
     def __init__(self, features):
         super().__init__()
-        self.query = nn.Linear(in_features=features, out_features=features)
-        self.value = nn.Linear(in_features=features, out_features=1)
+        self.query = Linear(in_features=features, out_features=features)
+        self.value = Linear(in_features=features, out_features=1)
 
     def forward(self, query, memory):
         "Pass through"
@@ -76,12 +89,12 @@ class TanhAttention(nn.Module):
         return alignment
 
 
-class AttentionLayer(nn.Module):
+class AttentionLayer(Module):
     "Attention layer"
 
     def __init__(self, input_size, hidden_size):
         super().__init__()
-        self.rnn = nn.GRUCell(input_size=input_size, hidden_size=hidden_size)
+        self.rnn = GRUCell(input_size=input_size, hidden_size=hidden_size)
         self.attn = TanhAttention(hidden_size)
 
     def forward(self, x, state, memory):

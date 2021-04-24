@@ -5,3 +5,6 @@ pandas
 scipy
 torch
 tqdm
+
+pypesq
+pystoi

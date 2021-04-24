@@ -1,3 +1,7 @@
+"""
+Presentation of the project. Write to files and draw some plots.
+"""
+
 from librosa import display as librosa_display
 from matplotlib import pyplot as plt
 from scipy.io import wavfile
