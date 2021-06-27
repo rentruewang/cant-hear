@@ -2,7 +2,7 @@
 This module provides all sort of loss functions used in the project
 """
 
-import functools
+from functools import wraps
 
 import torch
 from numpy import random as np_random
@@ -16,7 +16,7 @@ from torch.nn import utils as nn_utils
 def apply(func) -> object:
     "Maps an object to another object"
 
-    @functools.wraps(func)
+    @wraps(func)
     def function(obj):
         return func(obj)
 
