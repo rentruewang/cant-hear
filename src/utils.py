@@ -90,7 +90,7 @@ def melspectrogram(
 def power(seq: np.ndarray) -> np.ndarray:
     "Power of the original voice sequence"
 
-    return (seq ** 2).sum()
+    return (seq**2).sum()
 
 
 def rescale(inp: np.ndarray, target: np.ndarray, ratio: float) -> np.ndarray:

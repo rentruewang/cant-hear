@@ -34,7 +34,7 @@ def _snr(reference: np.ndarray, tensor: np.ndarray) -> float:
     "Signal to noise ratio"
     assert reference.shape == tensor.shape, (reference.shape, tensor.shape)
     noise_pow = ((tensor - reference) ** 2).sum()
-    ref_pow = (reference ** 2).sum()
+    ref_pow = (reference**2).sum()
     return ref_pow / noise_pow
 
 

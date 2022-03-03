@@ -61,8 +61,8 @@ class NoGrad(Function):
 def signal_noise_ratio(clean: Tensor, output: Tensor) -> tuple:
     "Signal to noise ratio"
     noise = output - clean
-    power_clean = (clean ** 2).sum()
-    power_noise = (noise ** 2).sum()
+    power_clean = (clean**2).sum()
+    power_noise = (noise**2).sum()
     return (power_clean, power_noise)
 
 
@@ -131,7 +131,7 @@ def random_scale(tensor: Tensor, scale: float) -> Tensor:
     "Creates a tensor of random scale"
 
     r = np_random.uniform(low=-1, high=1)
-    factor = scale ** r
+    factor = scale**r
     return tensor * factor
 
 
