@@ -141,7 +141,7 @@ def mixing1d(arrays, indices, weights, target_length):
     "Mix different voices together"
 
     zeros = np.zeros(shape=[target_length])
-    for (arr, ind, w) in zip(arrays, indices, weights):
+    for arr, ind, w in zip(arrays, indices, weights):
         zeros += w * pad1d(arr, (ind, target_length - len(arr) - ind))
     return zeros
 
@@ -170,7 +170,7 @@ def unfold_dict(dictionary: dict) -> dict:
     def unfold_dict_recursive(dictionary, prefix=""):
         "Flatten a dictionary recursively"
 
-        for (key, elem) in dictionary.items():
+        for key, elem in dictionary.items():
             assert isinstance(key, str)
             name = "/".join((prefix, key))
 

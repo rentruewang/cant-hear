@@ -54,7 +54,7 @@ def _prepare_model(model_config: dict, device: str) -> Module:
 def spec_wav(data: np.ndarray or tuple, fname: str, configs: dict, dirs: tuple):
     "Write spectrogram to wavfiles"
     if isinstance(data, Sequence):
-        for (idx, entry) in enumerate(data):
+        for idx, entry in enumerate(data):
             spec_wav(entry, fname + f"_{idx:02d}", configs, dirs)
     else:
         (vis_dir, voc_dir) = dirs
@@ -171,7 +171,7 @@ def inference(
         logger.info("transforming to waveform")
         wave_list = (tuple(griffinlim(o, pool) for o in out) for out in out_list)
         wave_ref = (griffinlim(r, pool) for r in reference)
-        for (metric, func, default) in waveform_metrics:
+        for metric, func, default in waveform_metrics:
             default = default or {}
             logger.info(f"applying {metric}")
             value_list = (
@@ -208,12 +208,11 @@ def inference(
         zip(*dirty_test_out),
     )
 
-    for (i, packed_data) in utils.progbar(
+    for i, packed_data in utils.progbar(
         iterable=enumerate(data_iter),
         total=len(clean_train),
         message="Save spectrogram to wav files",
     ):
-
         (
             c_train,
             c_train_o,
@@ -356,7 +355,7 @@ if __name__ == "__main__":
         history = os_path.join(to_infer, "history.json")
         print(history)
         history_dict = json.load(fp=open(file=history, mode="r"))
-        for (key, value) in history_dict.items():
+        for key, value in history_dict.items():
             td = os_path.join(target, to_infer)
             os.makedirs(name=td, exist_ok=True)
             fname = "_".join(clear_relative(key).split("/"))

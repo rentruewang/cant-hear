@@ -106,7 +106,7 @@ def highway(inp, layers, gates, act):
     out_expand = inp_permuted.contiguous().view(
         batch_size * seq_len, inp_permuted.size(2)
     )
-    for (l, g) in zip(layers, gates):
+    for l, g in zip(layers, gates):
         H = l(out_expand)
         H = act(H)
         T = g(out_expand)

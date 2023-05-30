@@ -75,7 +75,7 @@ def train(
         mean_F = defaultdict(list)
         ratio = defaultdict(list)
 
-        for (clean, dirty) in utils.progbar(
+        for clean, dirty in utils.progbar(
             iterable=train_loader, message=f"Epoch {epo:04d}/{epochs:04d}, training."
         ):
             (clean, dirty) = (clean.to(device), dirty.to(device))
@@ -131,7 +131,7 @@ def train(
             mean_N["train"].append(n_power.item())
 
         with no_grad():
-            for (clean, dirty) in utils.progbar(
+            for clean, dirty in utils.progbar(
                 iterable=test_loader, message=f"Epoch {epo:04d}/{epochs:04d}, testing."
             ):
                 (clean, dirty) = (clean.to(device), dirty.to(device))
@@ -215,7 +215,7 @@ def train(
                 mean_D[key] = sum(value) / len(value)
             recorder(tag="supv_loss", value=mean_D)
 
-        for (key_S, key_N) in zip(mean_S.keys(), mean_N.keys()):
+        for key_S, key_N in zip(mean_S.keys(), mean_N.keys()):
             key = key_N
             assert key == key_S
             (val_N, val_S) = (mean_N[key], mean_S[key])
