@@ -44,8 +44,8 @@ def read_wav(
 ) -> np.ndarray:
     "Read a wave file into a normalized array"
 
-    (S, _) = librosa.load(fname, sr=sr)
-    (S, _) = effects.trim(S)
+    S, _ = librosa.load(fname, sr=sr)
+    S, _ = effects.trim(S)
     if pre_emphasis:
         S[1:] -= S[:-1]
     if norm is not 0:
@@ -133,7 +133,7 @@ def pad1d(array: np.ndarray, pads: tuple) -> np.ndarray:
     "Pad the input"
 
     assert len(pads) == 2
-    (l, r) = pads
+    l, r = pads
     return np.concatenate((np.zeros([l]), array, np.zeros([r])))
 
 
@@ -157,7 +157,7 @@ def generate_noises(
     ending_indices = starting_indices + lengths
     ending_indices[ending_indices > target_length] = target_length
     lengths = ending_indices - starting_indices
-    selected = tuple(crop1d(a, l) for (a, l) in zip(selected, lengths))
+    selected = tuple(crop1d(a, l) for a, l in zip(selected, lengths))
     weights = softmax(np_random.randn(len(indices)) / T, 0)
     return mixing1d(selected, starting_indices, weights, target_length)
 

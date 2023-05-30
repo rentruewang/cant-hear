@@ -45,7 +45,7 @@ class PairedDataset(Dataset):
 
         files = glob.glob(filepath)
 
-        (clean, dirty) = identifiers
+        clean, dirty = identifiers
         clean_files = sorted(f for f in files if clean in f)
         dirty_files = sorted(f for f in files if dirty in f)
         assert len(clean_files) == len(dirty_files)
@@ -77,7 +77,7 @@ class PairedDataset(Dataset):
         return self.len
 
     def __getitem__(self, index: int):
-        (clean, dirty) = (self.clean_arrays[index], self.dirty_arrays[index])
+        clean, dirty = self.clean_arrays[index], self.dirty_arrays[index]
         return self.pool.starmap(
             func=_select_slice,
             iterable=((clean, self.time_steps, self.dim), (dirty, self.time_steps)),

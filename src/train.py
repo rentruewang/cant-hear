@@ -47,15 +47,15 @@ def train(
     flags: tuple,
 ):
     "Training the model"
-    (do_flow, do_recon, do_ambient, do_supv) = flags
-    (train_loader, test_loader) = loaders
+    do_flow, do_recon, do_ambient, do_supv = flags
+    train_loader, test_loader = loaders
 
     model = model_info.model
     model_optim = model_info.optim
     amb = amb_info.model
     amb_optim = amb_info.optim
 
-    (wgan_ratio, grad_penalty) = wgan_info
+    wgan_ratio, grad_penalty = wgan_info
 
     try:
         len_model = len(model)
@@ -78,10 +78,10 @@ def train(
         for clean, dirty in utils.progbar(
             iterable=train_loader, message=f"Epoch {epo:04d}/{epochs:04d}, training."
         ):
-            (clean, dirty) = (clean.to(device), dirty.to(device))
+            clean, dirty = clean.to(device), dirty.to(device)
             model.train()
             if do_flow:
-                (F_loss, out) = losses.flow(
+                F_loss, out = losses.flow(
                     model=(model, model_optim),
                     data=dirty,
                     recon_loss=recon_loss,
@@ -92,7 +92,7 @@ def train(
                 mean_F["train"].append(F_loss.item())
 
             if do_ambient:
-                ((value, grad_norm), out) = losses.ambient(
+                (value, grad_norm), out = losses.ambient(
                     model=(model, model_optim),
                     amb=(amb, amb_optim),
                     data=(clean, dirty),
@@ -106,7 +106,7 @@ def train(
                 mean_G["train"].append(grad_norm.item())
 
             if do_recon:
-                (R_loss, out) = losses.reconstruct(
+                R_loss, out = losses.reconstruct(
                     model=(model, model_optim),
                     data=clean,
                     recon_loss=recon_loss,
@@ -116,7 +116,7 @@ def train(
                 mean_R["train"].append(R_loss.item())
 
             if do_supv:
-                (loss, out) = losses.supervised(
+                loss, out = losses.supervised(
                     model=(model, model_optim),
                     data=(clean, dirty),
                     recon_loss=recon_loss,
@@ -125,7 +125,7 @@ def train(
                 )
                 mean_D["train"].append(loss.item())
 
-            (s_power, n_power) = losses.signal_noise_ratio(clean, out)
+            s_power, n_power = losses.signal_noise_ratio(clean, out)
 
             mean_S["train"].append(s_power.item())
             mean_N["train"].append(n_power.item())
@@ -134,11 +134,11 @@ def train(
             for clean, dirty in utils.progbar(
                 iterable=test_loader, message=f"Epoch {epo:04d}/{epochs:04d}, testing."
             ):
-                (clean, dirty) = (clean.to(device), dirty.to(device))
+                clean, dirty = clean.to(device), dirty.to(device)
                 model.eval()
 
                 if do_flow:
-                    (F_loss, out) = losses.flow(
+                    F_loss, out = losses.flow(
                         model=(model, model_optim),
                         data=dirty,
                         recon_loss=recon_loss,
@@ -149,7 +149,7 @@ def train(
                     mean_F["test"].append(F_loss.item())
 
                 if do_ambient:
-                    ((value, grad_norm), out) = losses.ambient(
+                    (value, grad_norm), out = losses.ambient(
                         model=(model, model_optim),
                         amb=(amb, amb_optim),
                         data=(clean, dirty),
@@ -164,7 +164,7 @@ def train(
                     mean_G["test"].append(grad_norm.item())
 
                 if do_recon:
-                    (R_loss, out) = losses.reconstruct(
+                    R_loss, out = losses.reconstruct(
                         model=(model, model_optim),
                         data=clean,
                         recon_loss=recon_loss,
@@ -174,7 +174,7 @@ def train(
                     mean_R["test"].append(R_loss.item())
 
                 if do_supv:
-                    (loss, out) = losses.supervised(
+                    loss, out = losses.supervised(
                         model=(model, model_optim),
                         data=(clean, dirty),
                         recon_loss=recon_loss,
@@ -183,7 +183,7 @@ def train(
                     )
                     mean_D["test"].append(loss.item())
 
-                (s_power, n_power) = losses.signal_noise_ratio(clean, out)
+                s_power, n_power = losses.signal_noise_ratio(clean, out)
                 mean_S["test"].append(s_power.item())
                 mean_N["test"].append(n_power.item())
 
@@ -218,7 +218,7 @@ def train(
         for key_S, key_N in zip(mean_S.keys(), mean_N.keys()):
             key = key_N
             assert key == key_S
-            (val_N, val_S) = (mean_N[key], mean_S[key])
+            val_N, val_S = mean_N[key], mean_S[key]
             ratio[key] = (sum(val_S) / len(val_S)) / (sum(val_N) / len(val_N))
         recorder(tag="ratio", value=ratio)
 
@@ -316,11 +316,11 @@ if __name__ == "__main__":
     amb = PatchDiscriminator().to(device)
     amb_optim = Adam(model.parameters(), lr=lr, betas=betas)
     recon_loss = ReconstructionLoss()
-    loaders = (train_loader, test_loader)
+    loaders = train_loader, test_loader
     model_info = ModelOptim(model, model_optim)
     amb_info = ModelOptim(amb, amb_optim)
     wgan_info = ModelOptim(wgan_ratio, grad_penalty)
-    measure_info = (dropout, scale)
+    measure_info = dropout, scale
 
     if do_init:
         model.apply(init.init)

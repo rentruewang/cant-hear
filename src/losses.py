@@ -94,7 +94,7 @@ def flow(
     "Perform the entire flow"
 
     assert train or not max_norm
-    (model, optimizer) = model
+    model, optimizer = model
 
     input_size = data
     loss = 0
@@ -161,10 +161,10 @@ def ambient(
     "Ambient loss for wasserstein GAN"
 
     assert train or not max_norm
-    (model, model_optim) = model
-    (amb, amb_optim) = amb
-    (_, dirty) = data
-    (dropout, scale) = measure_info
+    model, model_optim = model
+    amb, amb_optim = amb
+    _, dirty = data
+    dropout, scale = measure_info
 
     for _ in range(wgan_ratio):
         out = amb(dirty)
@@ -218,8 +218,8 @@ def supervised(
 ) -> tuple:
     "Supervised training"
     assert train or not max_norm
-    (model, model_optim) = model
-    (clean, dirty) = data
+    model, model_optim = model
+    clean, dirty = data
 
     x = dirty
     for module in model:

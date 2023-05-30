@@ -57,7 +57,7 @@ def spec_wav(data: np.ndarray or tuple, fname: str, configs: dict, dirs: tuple):
         for idx, entry in enumerate(data):
             spec_wav(entry, fname + f"_{idx:02d}", configs, dirs)
     else:
-        (vis_dir, voc_dir) = dirs
+        vis_dir, voc_dir = dirs
         present.save_spec(data=data, fname=os_path.join(vis_dir, f"{fname}.png"))
         data = librosa.griffinlim(
             S=data,
@@ -94,13 +94,13 @@ def inference(
     logger: logging.Logger = None,
 ):
     "Perform inference with the model"
-    ((clean_train, dirty_train), (clean_test, dirty_test)) = data
+    (clean_train, dirty_train), (clean_test, dirty_test) = data
     assert (
         clean_train.shape == dirty_train.shape == clean_test.shape == dirty_test.shape
     )
     assert logger is not None
 
-    in_list = (clean_train, dirty_train, clean_test, dirty_test)
+    in_list = clean_train, dirty_train, clean_test, dirty_test
 
     model = _prepare_model(model_config=model_config, device=device)
 
@@ -115,11 +115,11 @@ def inference(
     in_list = to_numpy(in_list)
     out_list = to_numpy(out_list)
 
-    (clean_train, dirty_train, clean_test, dirty_test) = in_list
-    (clean_train_out, dirty_train_out, clean_test_out, dirty_test_out) = out_list
+    clean_train, dirty_train, clean_test, dirty_test = in_list
+    clean_train_out, dirty_train_out, clean_test_out, dirty_test_out = out_list
     reference = (*(2 * (clean_train,)), *(2 * (clean_test,)))
 
-    (l1_loss, l2_loss) = (
+    l1_loss, l2_loss = (
         lambda input, target: F.l1_loss(
             input=torch.tensor(input, device=device),
             target=torch.tensor(target, device=device),
@@ -130,12 +130,12 @@ def inference(
         ).cpu(),
     )
 
-    out_tags = ("clean_train", "dirty_train", "clean_test", "dirty_test")
+    out_tags = "clean_train", "dirty_train", "clean_test", "dirty_test"
 
     logger.info("applying snr")
     snr_list = tuple(
         tuple(_snr(reference=r, tensor=t).item() for t in entry)
-        for (r, entry) in zip(reference, out_list)
+        for r, entry in zip(reference, out_list)
     )
     json.dump(
         obj=dict(zip(out_tags, snr_list)),
@@ -146,7 +146,7 @@ def inference(
     logger.info("applying l1")
     l1_list = (
         tuple(l1_loss(input=t, target=r).item() for t in entry)
-        for (r, entry) in zip(reference, out_list)
+        for r, entry in zip(reference, out_list)
     )
     json.dump(
         obj=dict(zip(out_tags, l1_list)),
@@ -157,7 +157,7 @@ def inference(
     logger.info("applying l2")
     l2_list = (
         tuple(l2_loss(input=t, target=r).item() for t in entry)
-        for (r, entry) in zip(reference, out_list)
+        for r, entry in zip(reference, out_list)
     )
     json.dump(
         obj=dict(zip(out_tags, l2_list)),
@@ -176,7 +176,7 @@ def inference(
             logger.info(f"applying {metric}")
             value_list = (
                 tuple(func(ref=r, deg=t, pool=pool, **default) for t in entry)
-                for (r, entry) in zip(wave_ref, wave_list)
+                for r, entry in zip(wave_ref, wave_list)
             )
             json.dump(
                 obj=dict(zip(out_tags, value_list)),
@@ -248,7 +248,7 @@ def inference(
             func=spec_wav,
             iterable=(
                 (s, n, configs, (vis_dir, voc_dir))
-                for (s, n) in zip(save_list, name_list)
+                for s, n in zip(save_list, name_list)
             ),
         )
 
@@ -286,7 +286,7 @@ if __name__ == "__main__":
     configs = json.load(fp=open(file=flags.config, mode="r"))
     path = flags.path
     processes = flags.processes or os.cpu_count()
-    (train_path, test_path) = os_path.join(path, "train"), os_path.join(path, "test")
+    train_path, test_path = os_path.join(path, "train"), os_path.join(path, "test")
     device = flags.device if cuda.is_available() else "cpu"
     samples = flags.samples
     sr = configs["sr"]

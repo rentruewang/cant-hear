@@ -33,7 +33,7 @@ if __name__ == "__main__":
     major_configs = json.load(fp=open(file=flags.major_configs, mode="r"))
     path_configs = json.load(fp=open(file=flags.path_configs, mode="r"))
 
-    (normal, signal) = flags.normal, flags.signal
+    normal, signal = flags.normal, flags.signal
     visual = flags.visual
     normalize = flags.normalize
     spec_norm = flags.power
@@ -168,7 +168,7 @@ if __name__ == "__main__":
                 utils.progbar(
                     iterable=(
                         (utils.name(sub_train, file, "original_clean"), arr)
-                        for (file, arr) in zip(train_files, fd_clean_train)
+                        for file, arr in zip(train_files, fd_clean_train)
                     ),
                     total=len(train_files),
                     message="saving training spectrogram.",
@@ -179,7 +179,7 @@ if __name__ == "__main__":
                 utils.progbar(
                     iterable=(
                         (utils.name(sub_test, file, "original_clean"), arr)
-                        for (file, arr) in zip(test_files, fd_clean_test)
+                        for file, arr in zip(test_files, fd_clean_test)
                     ),
                     total=len(test_files),
                     message="saving testing spectrogram.",
@@ -190,7 +190,7 @@ if __name__ == "__main__":
                 utils.progbar(
                     iterable=(
                         (utils.name(sub_noise, file, "original_clean"), arr)
-                        for (file, arr) in zip(noise_files, fd_noise)
+                        for file, arr in zip(noise_files, fd_noise)
                     ),
                     total=len(noise_files),
                     message="saving noise spectrogram.",
@@ -238,7 +238,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (utils.name(sub_train, file, "mel_clean"), arr)
-                            for (file, arr) in zip(train_files, mel_fd_clean_train)
+                            for file, arr in zip(train_files, mel_fd_clean_train)
                         ),
                         total=len(train_files),
                         message="saving mel training melspectrogram.",
@@ -249,7 +249,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (utils.name(sub_test, file, "mel_clean"), arr)
-                            for (file, arr) in zip(test_files, mel_fd_clean_test)
+                            for file, arr in zip(test_files, mel_fd_clean_test)
                         ),
                         total=len(test_files),
                         message="saving mel testing melspectrogram.",
@@ -260,7 +260,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (utils.name(sub_noise, file, "mel_clean"), arr)
-                            for (file, arr) in zip(noise_files, mel_fd_noise)
+                            for file, arr in zip(noise_files, mel_fd_noise)
                         ),
                         total=len(noise_files),
                         message="saving mel noise melspectrogram.",
@@ -274,7 +274,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (data, utils.name(vis_sub_train, file, "clean.png"))
-                            for (data, file) in zip(fd_clean_train, train_files)
+                            for data, file in zip(fd_clean_train, train_files)
                         ),
                         total=len(train_files),
                         message="drawing training spectrogram.",
@@ -285,7 +285,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (data, utils.name(vis_sub_test, file, "clean.png"))
-                            for (data, file) in zip(fd_clean_test, test_files)
+                            for data, file in zip(fd_clean_test, test_files)
                         ),
                         total=len(test_files),
                         message="drawing testing spectrogram.",
@@ -296,7 +296,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (data, utils.name(vis_sub_noise, file, "clean.png"))
-                            for (data, file) in zip(fd_noise, noise_files)
+                            for data, file in zip(fd_noise, noise_files)
                         ),
                         total=len(noise_files),
                         message="drawing noise spectrogram.",
@@ -308,7 +308,7 @@ if __name__ == "__main__":
                         utils.progbar(
                             iterable=(
                                 (data, utils.name(vis_sub_train, file, "mel_clean.png"))
-                                for (data, file) in zip(mel_fd_clean_train, train_files)
+                                for data, file in zip(mel_fd_clean_train, train_files)
                             ),
                             total=len(train_files),
                             message="drawing mel training spectrogram.",
@@ -319,7 +319,7 @@ if __name__ == "__main__":
                         utils.progbar(
                             iterable=(
                                 (data, utils.name(vis_sub_test, file, "mel_clean.png"))
-                                for (data, file) in zip(mel_fd_clean_test, test_files)
+                                for data, file in zip(mel_fd_clean_test, test_files)
                             ),
                             total=len(test_files),
                             message="drawing mel testing spectrogram.",
@@ -330,7 +330,7 @@ if __name__ == "__main__":
                         utils.progbar(
                             iterable=(
                                 (data, utils.name(vis_sub_noise, file, "mel_clean.png"))
-                                for (data, file) in zip(mel_fd_noise, noise_files)
+                                for data, file in zip(mel_fd_noise, noise_files)
                             ),
                             total=len(noise_files),
                             message="drawing mel noise spectrogram.",
@@ -357,7 +357,7 @@ if __name__ == "__main__":
                 utils.progbar(
                     iterable=(
                         utils.rescale(d, c, 10 ** (normal / 20))
-                        for (d, c) in zip(td_dirty_train_N, td_clean_train)
+                        for d, c in zip(td_dirty_train_N, td_clean_train)
                     ),
                     total=len(td_dirty_train_N),
                     message="rescale on training noises.",
@@ -367,7 +367,7 @@ if __name__ == "__main__":
                 utils.progbar(
                     iterable=(
                         utils.rescale(d, c, 10 ** (normal / 20))
-                        for (d, c) in zip(td_dirty_test_N, td_clean_test)
+                        for d, c in zip(td_dirty_test_N, td_clean_test)
                     ),
                     total=len(td_dirty_test_N),
                     message="rescale on testing noises.",
@@ -402,7 +402,7 @@ if __name__ == "__main__":
                 utils.progbar(
                     iterable=(
                         utils.generate_noises(td_noise, idx, len(t), T)
-                        for (idx, t) in zip(index_sample_train, td_clean_train)
+                        for idx, t in zip(index_sample_train, td_clean_train)
                     ),
                     total=len(td_clean_train),
                     message="generating dirty training data.",
@@ -412,7 +412,7 @@ if __name__ == "__main__":
                 utils.progbar(
                     iterable=(
                         utils.generate_noises(td_noise, idx, len(t), T)
-                        for (idx, t) in zip(index_sample_test, td_clean_test)
+                        for idx, t in zip(index_sample_test, td_clean_test)
                     ),
                     total=len(td_clean_test),
                     message="generating dirty testing data.",
@@ -423,7 +423,7 @@ if __name__ == "__main__":
                 utils.progbar(
                     iterable=(
                         utils.rescale(d, c, 10 ** (signal / 20))
-                        for (d, c) in zip(td_dirty_train_S, td_clean_train)
+                        for d, c in zip(td_dirty_train_S, td_clean_train)
                     ),
                     total=len(td_dirty_train_S),
                     message="rescale on training noises.",
@@ -433,7 +433,7 @@ if __name__ == "__main__":
                 utils.progbar(
                     iterable=(
                         utils.rescale(d, c, 10 ** (signal / 20))
-                        for (d, c) in zip(td_dirty_test_S, td_clean_test)
+                        for d, c in zip(td_dirty_test_S, td_clean_test)
                     ),
                     total=len(td_dirty_test_S),
                     message="rescale on testing noises.",
@@ -444,14 +444,14 @@ if __name__ == "__main__":
 
         td_dirty_train = tuple(
             utils.progbar(
-                iterable=(n + s for (n, s) in zip(td_dirty_train_N, td_dirty_train_S)),
+                iterable=(n + s for n, s in zip(td_dirty_train_N, td_dirty_train_S)),
                 total=len(td_clean_train),
                 message="adding two training modes",
             )
         )
         td_dirty_test = tuple(
             utils.progbar(
-                iterable=(n + s for (n, s) in zip(td_dirty_test_N, td_dirty_test_S)),
+                iterable=(n + s for n, s in zip(td_dirty_test_N, td_dirty_test_S)),
                 total=len(td_clean_test),
                 message="adding two testing modes",
             )
@@ -482,14 +482,14 @@ if __name__ == "__main__":
 
         train_data = tuple(
             utils.progbar(
-                iterable=(c + d for (c, d) in zip(fd_clean_train, fd_dirty_train)),
+                iterable=(c + d for c, d in zip(fd_clean_train, fd_dirty_train)),
                 total=len(fd_dirty_train),
                 message="adding training data.",
             )
         )
         test_data = tuple(
             utils.progbar(
-                iterable=(c + d for (c, d) in zip(fd_clean_test, fd_dirty_test)),
+                iterable=(c + d for c, d in zip(fd_clean_test, fd_dirty_test)),
                 total=len(fd_dirty_test),
                 message="adding testing data.",
             )
@@ -500,7 +500,7 @@ if __name__ == "__main__":
                 utils.progbar(
                     iterable=(
                         (c + d, sr, n_fft, hop_length, win_length, window, spec_norm)
-                        for (c, d) in zip(td_clean_train, td_dirty_train)
+                        for c, d in zip(td_clean_train, td_dirty_train)
                     ),
                     total=len(fd_dirty_train),
                     message="converting training to mel.",
@@ -511,7 +511,7 @@ if __name__ == "__main__":
                 utils.progbar(
                     iterable=(
                         (c + d, sr, n_fft, hop_length, win_length, window, spec_norm)
-                        for (c, d) in zip(td_clean_test, td_dirty_test)
+                        for c, d in zip(td_clean_test, td_dirty_test)
                     ),
                     total=len(fd_dirty_test),
                     message="converting testing to mel.",
@@ -524,7 +524,7 @@ if __name__ == "__main__":
                 utils.progbar(
                     iterable=(
                         (utils.name(sub_train, file, "original_dirty"), arr)
-                        for (file, arr) in zip(train_files, train_data)
+                        for file, arr in zip(train_files, train_data)
                     ),
                     total=len(train_data),
                     message="saving training data.",
@@ -535,7 +535,7 @@ if __name__ == "__main__":
                 utils.progbar(
                     iterable=(
                         (utils.name(sub_test, file, "original_dirty"), arr)
-                        for (file, arr) in zip(test_files, test_data)
+                        for file, arr in zip(test_files, test_data)
                     ),
                     total=len(test_data),
                     message="saving testing data.",
@@ -548,7 +548,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (utils.name(sub_train, file, "mel_dirty"), arr)
-                            for (file, arr) in zip(train_files, mel_train_data)
+                            for file, arr in zip(train_files, mel_train_data)
                         ),
                         total=len(train_data),
                         message="saving mel training data.",
@@ -559,7 +559,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (utils.name(sub_test, file, "mel_dirty"), arr)
-                            for (file, arr) in zip(test_files, mel_test_data)
+                            for file, arr in zip(test_files, mel_test_data)
                         ),
                         total=len(test_data),
                         message="saving mel testing data.",
@@ -571,7 +571,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (data, utils.name(vis_sub_train, file, "dirty.png"))
-                            for (data, file) in zip(train_data, train_files)
+                            for data, file in zip(train_data, train_files)
                         ),
                         total=len(train_data),
                         message="drawing training data.",
@@ -582,7 +582,7 @@ if __name__ == "__main__":
                     utils.progbar(
                         iterable=(
                             (data, utils.name(vis_sub_test, file, "dirty.png"))
-                            for (data, file) in zip(test_data, test_files)
+                            for data, file in zip(test_data, test_files)
                         ),
                         total=len(test_data),
                         message="drawing testing data.",
@@ -594,7 +594,7 @@ if __name__ == "__main__":
                         utils.progbar(
                             iterable=(
                                 (data, utils.name(vis_sub_train, file, "mel_dirty.png"))
-                                for (data, file) in zip(mel_train_data, train_files)
+                                for data, file in zip(mel_train_data, train_files)
                             ),
                             total=len(train_data),
                             message="drawing mel training data.",
@@ -605,7 +605,7 @@ if __name__ == "__main__":
                         utils.progbar(
                             iterable=(
                                 (data, utils.name(vis_sub_test, file, "mel_dirty.png"))
-                                for (data, file) in zip(mel_test_data, test_files)
+                                for data, file in zip(mel_test_data, test_files)
                             ),
                             total=len(test_data),
                             message="drawing mel testing data.",

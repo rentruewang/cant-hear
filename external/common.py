@@ -19,9 +19,7 @@ def evaluate(func: Callable) -> Callable:
 
         return (
             sum(
-                pool.starmap(
-                    func=func, iterable=((r, d, sr) for (r, d) in zip(ref, deg))
-                )
+                pool.starmap(func=func, iterable=((r, d, sr) for r, d in zip(ref, deg)))
             )
             / length
         )

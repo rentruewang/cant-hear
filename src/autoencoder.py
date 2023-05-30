@@ -6,7 +6,9 @@ from typing import Sequence
 
 import torch
 from torch.nn import (
+    GRU,
     RNN,
+    AdaptiveAvgPool1d,
     Conv1d,
     Conv2d,
     Dropout,
@@ -14,7 +16,9 @@ from torch.nn import (
     InstanceNorm1d,
     InstanceNorm2d,
     Linear,
+    Module,
     ModuleList,
+    Parameter,
     Sequential,
 )
 from torch.nn import functional as F
@@ -31,9 +35,9 @@ def pad_layer(inp, layer, is_2d=False):
         kernel_size = layer.kernel_size
     if not is_2d:
         if kernel_size % 2 == 0:
-            pad = (kernel_size // 2, kernel_size // 2 - 1)
+            pad = kernel_size // 2, kernel_size // 2 - 1
         else:
-            pad = (kernel_size // 2, kernel_size // 2)
+            pad = kernel_size // 2, kernel_size // 2
     else:
         if kernel_size % 2 == 0:
             pad = (
@@ -57,7 +61,7 @@ def pad_layer(inp, layer, is_2d=False):
 
 def pixel_shuffle_1d(inp, upscale_factor=2):
     "Shuffle and upscale the input"
-    (batch_size, channels, in_width) = inp.size()
+    batch_size, channels, in_width = inp.size()
     channels //= upscale_factor
 
     out_width = in_width * upscale_factor
@@ -120,7 +124,7 @@ def highway(inp, layers, gates, act):
 def RNN(inp, layer):
     "RNN needs no explanation."
     inp_permuted = inp.permute(2, 0, 1)
-    (out_permuted, _) = layer(inp_permuted)
+    out_permuted, _ = layer(inp_permuted)
     out_rnn = out_permuted.permute(1, 2, 0)
     return out_rnn
 
@@ -328,7 +332,7 @@ class Decoder(Module):
     def forward(self, x, c):
         "Pass through"
         # emb = self.emb(c)
-        (emb2, emb4, emb6, emb8, embd2, embd4, embrnn) = c
+        emb2, emb4, emb6, emb8, embd2, embd4, embrnn = c
         # conv layer
         out = self.conv_block(
             x, [self.conv1, self.conv2], self.ins_norm1, embrnn, res=True
@@ -516,7 +520,7 @@ class Model(Module):
 
     def forward(self, x):
         "Encode, then, Decode"
-        (e, c) = self.enc(x)
+        e, c = self.enc(x)
 
         if self.connection == "normal":
             pass
