@@ -19,12 +19,12 @@ from tqdm import tqdm
 
 
 @wraps(tqdm)
-def progbar(iterable, total: int = None, message: str = "") -> tqdm:
+def progbar(iterable, total: int | None = None, message: str = "") -> tqdm:
     print(message)
     return tqdm(iterable=iterable, total=total)
 
 
-def terminate_on_nan(_: Module, grad_input: tuple, grad_output: tuple) -> bool:
+def terminate_on_nan(_: Module, grad_input: tuple, grad_output: tuple) -> None:
     "Terminates the training process if NaN is found."
 
     nan_in = ((g is None or torch.isnan(g)) for g in grad_input)
@@ -34,7 +34,7 @@ def terminate_on_nan(_: Module, grad_input: tuple, grad_output: tuple) -> bool:
         raise SystemExit
 
 
-def name(path: str, fname: str, *args: tuple) -> str:
+def name(path: str, fname: str, *args: str) -> str:
     "Generate the name for a file"
     return os_path.join(path, "_".join(fname.replace(".", "/").split("/") + list(args)))
 

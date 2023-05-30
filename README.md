@@ -1,4 +1,4 @@
-# rm-noise
+# Can't Hear
 
 ### A research project to remove noise without using anything clever.
 
