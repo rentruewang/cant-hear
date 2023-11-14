@@ -6,7 +6,7 @@ import functools
 
 import torch
 from numpy import random as np_random
-from torch import Tensor, autograd, enable_grad, no_grad
+from torch import Tensor, autograd
 from torch.autograd import Function
 from torch.nn import L1Loss, Module, MSELoss
 from torch.nn import functional as F
@@ -57,7 +57,7 @@ class NoGrad(Function):
         return None
 
 
-@no_grad()
+@torch.no_grad()
 def signal_noise_ratio(clean: Tensor, output: Tensor) -> tuple:
     "Signal to noise ratio"
     noise = output - clean
@@ -147,7 +147,7 @@ def artifact(
     return processed + noise
 
 
-@enable_grad()
+@torch.enable_grad()
 def ambient(
     model: tuple,
     amb: tuple,
