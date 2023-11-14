@@ -2,10 +2,11 @@
 Utility functions thats reusable
 """
 
+import functools
 import os
 from collections import defaultdict
-from functools import wraps
 from os import path as os_path
+from typing import Iterable
 
 import librosa
 import numpy as np
@@ -18,8 +19,8 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 
-@wraps(tqdm)
-def progbar(iterable, total: int | None = None, message: str = "") -> tqdm:
+@functools.wraps(tqdm)
+def progbar(iterable: Iterable, total: int | None = None, message: str = "") -> tqdm:
     print(message)
     return tqdm(iterable=iterable, total=total)
 

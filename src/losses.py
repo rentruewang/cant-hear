@@ -2,21 +2,21 @@
 This module provides all sort of loss functions used in the project
 """
 
-from functools import wraps
+import functools
 
 import torch
 from numpy import random as np_random
-from torch import Tensor, autograd
+from torch import Tensor, autograd, enable_grad, no_grad
 from torch.autograd import Function
 from torch.nn import L1Loss, Module, MSELoss
 from torch.nn import functional as F
 from torch.nn import utils as nn_utils
 
 
-def apply(func) -> object:
+def apply(func: callable) -> object:
     "Maps an object to another object"
 
-    @wraps(func)
+    @functools.wraps(func)
     def function(obj):
         return func(obj)
 
@@ -57,7 +57,7 @@ class NoGrad(Function):
         return None
 
 
-@torch.no_grad()
+@no_grad()
 def signal_noise_ratio(clean: Tensor, output: Tensor) -> tuple:
     "Signal to noise ratio"
     noise = output - clean
@@ -147,7 +147,7 @@ def artifact(
     return processed + noise
 
 
-@torch.enable_grad()
+@enable_grad()
 def ambient(
     model: tuple,
     amb: tuple,

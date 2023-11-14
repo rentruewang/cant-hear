@@ -2,13 +2,13 @@
 This module is used when you want to evaluate the model you trained.
 """
 
+import functools
 import glob
 import json
 import logging
 import os
 import types
 from argparse import ArgumentParser
-from functools import wraps
 from multiprocessing.pool import Pool
 from os import path as os_path
 from typing import Sequence, Union
@@ -330,7 +330,7 @@ if __name__ == "__main__":
 
     logger = logging.getLogger()
 
-    @wraps(librosa.griffinlim)
+    @functools.wraps(librosa.griffinlim)
     def griffinlim(S: np.ndarray, pool: Union[Pool, MapWrapper]) -> np.ndarray:
         if S.ndim == 2:
             return librosa.griffinlim(
