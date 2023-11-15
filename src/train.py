@@ -2,10 +2,10 @@
 Use this module to train a model.
 """
 
+import collections
 import json
 import os
 from argparse import ArgumentParser
-from collections import defaultdict
 from os import path as os_path
 from typing import NamedTuple
 
@@ -66,14 +66,14 @@ def train(
     recorder = ScalarRecorder(summary=summary)
 
     for epo in range(1, 1 + epochs):
-        mean_V = defaultdict(list)
-        mean_G = defaultdict(list)
-        mean_R = defaultdict(list)
-        mean_S = defaultdict(list)
-        mean_N = defaultdict(list)
-        mean_D = defaultdict(list)
-        mean_F = defaultdict(list)
-        ratio = defaultdict(list)
+        mean_V = collections.defaultdict(list)
+        mean_G = collections.defaultdict(list)
+        mean_R = collections.defaultdict(list)
+        mean_S = collections.defaultdict(list)
+        mean_N = collections.defaultdict(list)
+        mean_D = collections.defaultdict(list)
+        mean_F = collections.defaultdict(list)
+        ratio = collections.defaultdict(list)
 
         for clean, dirty in utils.progbar(
             iterable=train_loader, message=f"Epoch {epo:04d}/{epochs:04d}, training."

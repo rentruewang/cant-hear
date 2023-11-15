@@ -2,9 +2,9 @@
 Utility functions thats reusable
 """
 
+import collections
 import functools
 import os
-from collections import defaultdict
 from os import path as os_path
 from typing import Iterable
 
@@ -228,7 +228,7 @@ class ScalarRecorder(SummaryWriter):
 
     def __init__(self, summary: str):
         super().__init__(log_dir=summary)
-        self.steps = defaultdict(int)
+        self.steps = collections.defaultdict(int)
 
     def __call__(self, tag: str, value: float):
         self.steps[tag] += 1
