@@ -2,7 +2,7 @@
 The module provides several modularized classes.
 """
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import torch
 from torch.nn import (

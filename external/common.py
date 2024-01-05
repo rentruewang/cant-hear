@@ -3,8 +3,8 @@ Common code that is present in pesq and stoi
 """
 
 import functools
+from collections.abc import Callable
 from multiprocessing.pool import Pool
-from typing import Callable
 
 from numpy import ndarray
 

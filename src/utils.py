@@ -5,8 +5,8 @@ Utility functions thats reusable
 import collections
 import functools
 import os
+from collections.abc import Iterable
 from os import path as os_path
-from typing import Iterable
 
 import librosa
 import numpy as np

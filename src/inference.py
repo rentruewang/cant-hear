@@ -9,9 +9,9 @@ import logging
 import os
 import types
 from argparse import ArgumentParser
+from collections.abc import Sequence
 from multiprocessing.pool import Pool
 from os import path as os_path
-from typing import Sequence, Union
 
 import librosa
 import numpy as np
@@ -331,7 +331,7 @@ if __name__ == "__main__":
     logger = logging.getLogger()
 
     @functools.wraps(librosa.griffinlim)
-    def griffinlim(S: np.ndarray, pool: Union[Pool, MapWrapper]) -> np.ndarray:
+    def griffinlim(S: np.ndarray, pool: Pool | MapWrapper) -> np.ndarray:
         if S.ndim == 2:
             return librosa.griffinlim(
                 S=S,
